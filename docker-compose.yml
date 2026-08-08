@@ -1,9 +1,20 @@
 version: '3.8'
 
 services:
-  zps-service-hours:
-    build: .
+  zps-web:
+    image: caddy:alpine
     container_name: zps_service_hours_app
-    ports:
-      - "8080:80"
     restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - .:/usr/share/caddy
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      - DOMAIN=zps-hours.duckdns.org
+
+volumes:
+  caddy_data:
+  caddy_config:

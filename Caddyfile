@@ -1,0 +1,32 @@
+{$DOMAIN:localhost} {
+    root * /usr/share/caddy
+    file_server
+
+    # === ЗАГОЛОВКИ БЕЗОПАСНОСТИ (Security Headers) ===
+    header {
+        X-Frame-Options "SAMEORIGIN"
+        X-Content-Type-Options "nosniff"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://www.gstatic.com https://*.firebaseapp.com https://*.googleapis.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com; img-src 'self' data: https://*.googleusercontent.com https://*.google.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com wss://*.firebaseio.com https://maps.google.com; frame-src https://accounts.google.com https://*.firebaseapp.com;"
+        Permissions-Policy "camera=(), microphone=(self), geolocation=(self), payment=()"
+        -Server # Скрывает версию сервера для безопасности
+    }
+
+    # === ЗАЩИТА ОТ УТЕЧКИ ВНУТРЕННИХ ФАЙЛОВ ===
+    @hidden_files {
+        path */.*
+    }
+    respond @hidden_files "Access Denied" 403
+
+    @sensitive_files {
+        path /Dockerfile /docker-compose.yml /.dockerignore /nginx.conf /Caddyfile /firestore.rules /antigravity_debug.log /build-env.js /.env
+    }
+    respond @sensitive_files "Access Denied" 403
+
+    # === СЖАТИЕ ===
+    encode gzip zstd
+
+    # === SPA МАРШРУТИЗАЦИЯ ===
+    try_files {path} {path}/ /index.html
+}
