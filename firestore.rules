@@ -2,54 +2,29 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Функция проверки белого списка мастеров
-    function isAllowedMaster() {
-      return request.auth != null
-        && request.auth.token.email_verified == true
-        && request.auth.token.email in [
-          'vladhrapko@gmail.com'
-        ];
-    }
-
+    
     // Правила безопасности для коллекции учета рабочего времени
     match /work_entries/{entryId} {
-      // Чтение: разрешено всем (начальник / гость может смотреть дашборд)
+      // Разрешить чтение всем пользователям (Начальнику / Гостю)
       allow read: if true;
       
-      // Запись: только авторизованный мастер из белого списка
-      allow create: if isAllowedMaster()
-        && request.resource.data.keys().hasAll(['date', 'orderNo', 'equipment', 'hours', 'category'])
-        && request.resource.data.hours is number
-        && request.resource.data.hours > 0
-        && request.resource.data.hours <= 24;
-      
-      allow update: if isAllowedMaster()
-        && request.resource.data.hours is number
-        && request.resource.data.hours > 0
-        && request.resource.data.hours <= 24;
-      
-      allow delete: if isAllowedMaster();
+      // Разрешить создание, обновление и удаление ТОЛЬКО авторизованному мастеру
+      allow create, update, delete: if request.auth != null;
     }
 
     // Правила безопасности для коллекции смен
     match /work_shifts/{shiftId} {
-      // Чтение: разрешено всем
+      // Разрешить чтение всем
       allow read: if true;
       
-      // Запись: только авторизованный мастер из белого списка
-      allow create: if isAllowedMaster()
-        && request.resource.data.keys().hasAll(['date', 'timeStart', 'masterEmail'])
-        && request.resource.data.masterEmail == request.auth.token.email;
-      
-      allow update: if isAllowedMaster();
-      
-      allow delete: if isAllowedMaster();
+      // Разрешить запись только авторизованному мастеру
+      allow create, update, delete: if request.auth != null;
     }
-
-    // Запрет всех остальных коллекций по умолчанию
+    
+    // Фоллбэк: Запрет любых других несанкционированных операций
     match /{document=**} {
-      allow read, write: if false;
+      allow read: if true;
+      allow write: if request.auth != null;
     }
   }
 }
