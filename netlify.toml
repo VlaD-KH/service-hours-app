@@ -1,0 +1,7 @@
+# =========================================================================
+# NETLIFY DEPLOYMENT CONFIGURATION
+# Runs build-env.js before publishing static SPA
+# =========================================================================
+[build]
+  command = "node build-env.js"
+  publish = "."
