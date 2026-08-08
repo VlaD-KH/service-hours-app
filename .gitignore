@@ -1,8 +1,16 @@
-antigravity_debug.log
-.DS_Store
-*.log
-
-# Sensitive config
-config.js
-dist/
+# Environment variables and secrets
 .env
+.env.local
+.env.*.local
+env.js
+
+# Debug logs and system files
+antigravity_debug.log
+*.log
+.DS_Store
+Thumbs.db
+
+# Dependencies & Build
+node_modules/
+dist/
+.cache/
