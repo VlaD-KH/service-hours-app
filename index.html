@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Сервисный Дашборд — Учет Рабочего Времени</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Inter Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    /* Кастомный скроллбар для таблиц и модальных окон */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col antialiased">
+
+  <!-- ВЕРХНЯЯ ПАНЕЛЬ / ШАПКА -->
+  <header class="bg-slate-900 text-white shadow-lg sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      
+      <!-- Логотип и заголовок -->
+      <div class="flex items-center space-x-3">
+        <div class="p-2 bg-blue-600 rounded-xl shadow-md">
+          <i class="fa-solid fa-wrench text-xl text-white"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-lg leading-tight">Сервисный Дашборд</h1>
+          <p class="text-xs text-slate-400 hidden sm:block">Учет рабочего времени & Oblako Sync</p>
+        </div>
+      </div>
+
+      <!-- Правый блок: Индикатор облака, Кнопка Входа/Выхода и Справка -->
+      <div class="flex items-center space-x-3">
+        
+        <!-- Статус подключения к Firestore -->
+        <div id="cloud-badge" class="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-medium bg-slate-800 text-amber-400 border border-slate-700 transition-all">
+          <span class="relative flex h-2.5 w-2.5">
+            <span id="ping-ring" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+            <span id="ping-dot" class="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+          </span>
+          <span id="sync-text">Подключение...</span>
+        </div>
+
+        <!-- Статус авторизации пользователя -->
+        <div id="auth-status-container" class="flex items-center space-x-2">
+          <!-- Динамически заполняется через JS -->
+        </div>
+
+        <!-- Кнопка вызова справки -->
+        <button onclick="toggleModal('info-modal')" class="p-2 text-slate-400 hover:text-white transition rounded-lg hover:bg-slate-800" title="Справка и Инструкция">
+          <i class="fa-solid fa-circle-question text-lg"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- УВЕДОМЛЕНИЕ О ДЕМО-РЕЖИМЕ (Если firebaseConfig не заполнен) -->
+  <div id="demo-banner" class="bg-amber-500 text-slate-900 px-4 py-2 text-xs font-bold text-center flex items-center justify-center space-x-2 shadow-sm hidden">
+    <i class="fa-solid fa-triangle-exclamation text-base"></i>
+    <span>Демо-режим: Вставьте свой `firebaseConfig` в файл index.html для синхронизации с реальным облаком Firebase!</span>
+  </div>
+
+  <!-- ОСНОВНОЙ КОНТЕЙНЕР -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-grow w-full space-y-6">
+
+    <!-- ВЕРХНЯЯ СТАТИСТИКА И ФИЛЬТРЫ -->
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+      
+      <!-- Панель фильтрации по дате -->
+      <div class="md:col-span-7 bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center space-x-2">
+          <i class="fa-regular fa-calendar-days text-blue-600 text-lg"></i>
+          <span class="text-sm font-semibold text-slate-700">Период отчета:</span>
+        </div>
+
+        <div class="flex items-center space-x-2">
+          <select id="filter-month" onchange="renderApp()" class="bg-slate-50 border border-slate-300 text-slate-700 font-semibold text-sm rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+            <option value="01">Январь</option>
+            <option value="02">Февраль</option>
+            <option value="03">Март</option>
+            <option value="04">Апрель</option>
+            <option value="05">Май</option>
+            <option value="06">Июнь</option>
+            <option value="07">Июль</option>
+            <option value="08">Август</option>
+            <option value="09">Сентябрь</option>
+            <option value="10">Октябрь</option>
+            <option value="11">Ноябрь</option>
+            <option value="12">Декабрь</option>
+          </select>
+
+          <select id="filter-year" onchange="renderApp()" class="bg-slate-50 border border-slate-300 text-slate-700 font-semibold text-sm rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+            <option value="2025">2025</option>
+            <option value="2026" selected>2026</option>
+            <option value="2027">2027</option>
+            <option value="2028">2028</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Карточка с итоговым количеством часов -->
+      <div class="md:col-span-5 bg-gradient-to-r from-blue-600 to-indigo-700 p-4 rounded-2xl shadow-md text-white flex justify-between items-center">
+        <div>
+          <p class="text-xs uppercase tracking-wider font-semibold opacity-80">Итого отработано за период</p>
+          <p id="total-hours-stat" class="text-3xl font-extrabold tracking-tight">0 <span class="text-sm font-normal opacity-90">ч</span></p>
+        </div>
+        <div class="bg-white/10 p-3 rounded-xl backdrop-blur-sm">
+          <i class="fa-solid fa-clock text-2xl text-blue-200"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- ДВУХКОЛОНОЧНЫЙ ИНТЕРФЕЙС: ФОРМА И ТАБЛИЦЫ -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <!-- ЛЕВАЯ КОЛОНКА: Форма добавления (Мастер) ИЛИ Инфо-баннер (Начальник/Гость) -->
+      <div class="lg:col-span-4">
+        
+        <!-- БЛОК ДЛЯ АВТОРИЗОВАННОГО МАСТЕРА (Добавление смены) -->
+        <div id="master-form-card" class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 sticky top-20 hidden">
+          <div class="flex items-center space-x-2 border-b border-slate-100 pb-3 mb-4">
+            <i class="fa-solid fa-circle-plus text-blue-600 text-lg"></i>
+            <h2 class="font-bold text-slate-800 text-base">Добавить смену / работу</h2>
+          </div>
+
+          <form id="add-entry-form" onsubmit="handleAddEntry(event)" class="space-y-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Дата</label>
+              <input type="date" id="input-date" required class="w-full p-2.5 border border-slate-300 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">№ Заказа</label>
+                <input type="text" id="input-order" list="orders-list" placeholder="410132" required class="w-full p-2.5 border border-slate-300 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50">
+                <datalist id="orders-list"></datalist>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Часы</label>
+                <input type="number" id="input-hours" step="0.1" min="0.1" placeholder="4.5" required class="w-full p-2.5 border border-slate-300 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Оборудование / Объект</label>
+              <input type="text" id="input-equipment" list="equipment-list" placeholder="WM-15P.00/M nr 26" required class="w-full p-2.5 border border-slate-300 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50">
+              <datalist id="equipment-list"></datalist>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Категория работ</label>
+              <select id="input-category" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 text-slate-700">
+                <option value="H">H — Гидравлика</option>
+                <option value="P">P — Пневматика</option>
+                <option value="E">E — Электрика</option>
+                <option value="S">S — Слесарные работы</option>
+                <option value="D+N">D+N — Диагностика + Ремонт</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Заметки / Описание</label>
+              <input type="text" id="input-notes" placeholder="Детали демонтажа, фильтры..." class="w-full p-2.5 border border-slate-300 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50">
+            </div>
+
+            <button type="submit" id="submit-btn" class="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-semibold py-3 rounded-xl transition-all shadow-md shadow-blue-500/20 flex items-center justify-center space-x-2 cursor-pointer">
+              <i class="fa-solid fa-floppy-disk"></i>
+              <span>Сохранить в Облако</span>
+            </button>
+          </form>
+        </div>
+
+        <!-- БЛОК ДЛЯ НЕАВТОРИЗОВАННОГО ПОЛЬЗОВАТЕЛЯ ("Только чтение" / Начальник) -->
+        <div id="read-only-banner-card" class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 sticky top-20 space-y-4">
+          <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center text-xl font-bold">
+            <i class="fa-solid fa-lock"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-800 text-base">Режим просмотра ("Только чтение")</h3>
+            <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+              Вы просматриваете дашборд в режиме руководителя. Вам доступна вся аналитика, сводные таблицы и журнал записей.
+            </p>
+          </div>
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/60 text-xs text-slate-600 space-y-1">
+            <div class="flex items-center space-x-2 font-semibold text-slate-700">
+              <i class="fa-solid fa-shield-halved text-blue-600"></i>
+              <span>Права доступа:</span>
+            </div>
+            <p>• Добавление и удаление записей заблокировано.</p>
+            <p>• Авторизуйтесь, если вы мастер для управления сгонами.</p>
+          </div>
+          <button onclick="toggleModal('login-modal')" class="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-xs transition flex items-center justify-center space-x-2">
+            <i class="fa-solid fa-right-to-bracket"></i>
+            <span>Войти как Мастер</span>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- ПРАВАЯ КОЛОНКА: Сводная таблица (Pivot) и Журнал -->
+      <div class="lg:col-span-8 space-y-6">
+
+        <!-- СВОДНАЯ АНАЛИТИЧЕСКАЯ ТАБЛИЦА (PIVOT) -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+          <div class="p-4 bg-slate-50/80 border-b border-slate-200/80 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <i class="fa-solid fa-chart-pie text-indigo-600"></i>
+              <h2 class="font-bold text-slate-800 text-sm">Сводный подсчет по заказам (Аналитика)</h2>
+            </div>
+            <span class="text-xs bg-indigo-50 text-indigo-700 font-semibold px-2.5 py-1 rounded-full border border-indigo-100">Авторасчет</span>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs text-left border-collapse">
+              <thead class="bg-slate-100/70 text-slate-600 uppercase font-bold border-b border-slate-200">
+                <tr>
+                  <th class="p-3">Заказ / Объект</th>
+                  <th class="p-3 text-center border-l border-slate-200 text-blue-600">H (Гидр)</th>
+                  <th class="p-3 text-center text-sky-600">P (Пневм)</th>
+                  <th class="p-3 text-center text-amber-600">E (Электр)</th>
+                  <th class="p-3 text-center text-slate-600">S (Слесар)</th>
+                  <th class="p-3 text-center text-purple-600">D+N (Диаг)</th>
+                  <th class="p-3 text-center border-l border-slate-200 bg-slate-200/60 font-extrabold text-slate-800">Итого</th>
+                </tr>
+              </thead>
+              <tbody id="pivot-tbody" class="divide-y divide-slate-100 font-medium">
+                <!-- Заполняется динамически через JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ТАБЛИЦА ЖУРНАЛА ЗАПИСЕЙ -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+          <div class="p-4 border-b border-slate-100 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <i class="fa-solid fa-list-check text-emerald-600"></i>
+              <h2 class="font-bold text-slate-800 text-sm">Журнал записей за период</h2>
+            </div>
+            <span id="entries-count-badge" class="text-xs bg-slate-100 text-slate-600 font-semibold px-2.5 py-0.5 rounded-full">0 записей</span>
+          </div>
+
+          <div class="overflow-x-auto max-h-[420px] overflow-y-auto">
+            <table class="w-full text-xs text-left">
+              <thead class="bg-slate-50 text-slate-500 uppercase sticky top-0 z-10 border-b border-slate-200">
+                <tr>
+                  <th class="p-3">Дата</th>
+                  <th class="p-3">Заказ</th>
+                  <th class="p-3">Кат.</th>
+                  <th class="p-3 text-right">Часы</th>
+                  <th class="p-3">Заметки</th>
+                  <th id="journal-action-header" class="p-3 text-center hidden">Действие</th>
+                </tr>
+              </thead>
+              <tbody id="journal-tbody" class="divide-y divide-slate-100 font-medium">
+                <!-- Заполняется динамически через JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- МОДАЛЬНОЕ ОКНО: АВТОРИЗАЦИЯ (LOGIN / GOOGLE) -->
+  <div id="login-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-5 relative">
+      
+      <!-- Кнопка закрытия -->
+      <button onclick="toggleModal('login-modal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition">
+        <i class="fa-solid fa-xmark text-xl"></i>
+      </button>
+
+      <div class="text-center space-y-1">
+        <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center text-xl font-bold mx-auto mb-2">
+          <i class="fa-solid fa-user-lock"></i>
+        </div>
+        <h3 class="font-bold text-slate-800 text-lg">Вход для Мастера</h3>
+        <p class="text-xs text-slate-500">Авторизуйтесь для создания и удаления смен</p>
+      </div>
+
+      <!-- Блок ошибок авторизации -->
+      <div id="auth-error-msg" class="hidden p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl font-medium"></div>
+
+      <!-- Форма входа по Email/Паролю -->
+      <form onsubmit="handleEmailLogin(event)" class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Email</label>
+          <input type="email" id="login-email" required placeholder="master@example.com" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Пароль</label>
+          <input type="password" id="login-password" required placeholder="••••••••" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50">
+        </div>
+
+        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-semibold py-2.5 rounded-xl transition text-sm shadow-md shadow-blue-500/20">
+          Войти по Email
+        </button>
+      </form>
+
+      <div class="flex items-center my-2">
+        <div class="flex-grow border-t border-slate-200"></div>
+        <span class="px-3 text-xs text-slate-400 font-semibold uppercase">или</span>
+        <div class="flex-grow border-t border-slate-200"></div>
+      </div>
+
+      <!-- Кнопка входа через Google -->
+      <button onclick="handleGoogleLogin()" class="w-full py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold rounded-xl text-sm transition flex items-center justify-center space-x-2">
+        <svg class="w-4 h-4" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+        </svg>
+        <span>Войти через Google</span>
+      </button>
+
+    </div>
+  </div>
+
+  <!-- МОДАЛЬНОЕ ОКНО: ПОДТВЕРЖДЕНИЕ УДАЛЕНИЯ -->
+  <div id="delete-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-5 shadow-xl border border-slate-100 space-y-4">
+      <div class="flex items-center space-x-3 text-red-600">
+        <div class="p-3 bg-red-50 rounded-xl">
+          <i class="fa-solid fa-triangle-exclamation text-xl"></i>
+        </div>
+        <h3 class="font-bold text-slate-800">Удалить запись?</h3>
+      </div>
+      <p class="text-xs text-slate-500 leading-relaxed">
+        Вы уверены, что хотите удалить эту запись из облачной базы данных Firestore? Действие синхронизируется на всех устройствах.
+      </p>
+      <div class="flex space-x-3">
+        <button onclick="closeDeleteModal()" class="w-1/2 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition">Отмена</button>
+        <button id="confirm-delete-btn" class="w-1/2 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-xl transition shadow-md shadow-red-500/20">Удалить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- МОДАЛЬНОЕ ОКНО: СПРАВКА И ПОДСКАЗКИ -->
+  <div id="info-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-100 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="font-bold text-slate-800 text-base">Справка о приложении</h3>
+        <button onclick="toggleModal('info-modal')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <div class="text-xs text-slate-600 space-y-3 leading-relaxed">
+        <p>⚡ <strong>Облачный синхрон:</strong> Записи сохраняются в базу данных Firebase Firestore. Данные мгновенно обновляются на телефонах и ПК.</p>
+        <p>🔐 <strong>Режимы доступа:</strong>
+          <br>• <em>Начальник / Руководитель:</em> Видит весь дашборд, общие часы, сводные таблицы по заказам и журнал (Без авторизации).
+          <br>• <em>Мастер:</em> Выполняет вход для добавления новых рабочих смен и редактирования/удаления записей.
+        </p>
+        <p>📊 <strong>Сводная аналитика:</strong> Таблица автоматически группирует отработанные часы по объектам/заказам в разрезе категорий (H — Гидравлика, P — Пневматика, E — Электрика, S — Слесарка, D+N — Диагностика/Ремонт).</p>
+      </div>
+      <button onclick="toggleModal('info-modal')" class="w-full py-2.5 bg-slate-900 text-white text-xs font-semibold rounded-xl">Понятно</button>
+    </div>
+  </div>
+
+  <!-- FIREBASE JS SDK v11 & ЛОГИКА ПРИЛОЖЕНИЯ -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { 
+      getAuth, 
+      signInWithEmailAndPassword, 
+      signInWithPopup, 
+      GoogleAuthProvider, 
+      signOut, 
+      onAuthStateChanged 
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { 
+      getFirestore, 
+      collection, 
+      doc, 
+      addDoc, 
+      deleteDoc, 
+      onSnapshot 
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // =========================================================================
+    // 1. КОНФИГУРАЦИЯ FIREBASE
+    // Замените значения ниже на данные вашего проекта из Firebase Console:
+    // https://console.firebase.google.com/ -> Настройки проекта -> Общие -> Ваши приложения
+    // =========================================================================
+    const firebaseConfig = {
+      apiKey: "***REMOVED***",
+      authDomain: "vhs-zps.firebaseapp.com",
+      projectId: "vhs-zps",
+      storageBucket: "vhs-zps.firebasestorage.app",
+      messagingSenderId: "***REMOVED***",
+      appId: "1:***REMOVED***:web:36d289606cdc2018b28d5d",
+      measurementId: "***REMOVED***"
+    };
+
+    // Состояние приложения
+    window.allEntries = [];
+    window.pendingDeleteId = null;
+    window.currentUser = null;
+
+    // Проверка заполненности конфига
+    const isConfigValid = firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY";
+
+    let app, auth, db;
+
+    // Установка даты по умолчанию (Сегодня)
+    const todayStr = new Date().toISOString().split('T')[0];
+    document.getElementById('input-date').value = todayStr;
+    
+    // Установка текущего месяца в фильтре
+    const currentMonthNum = (new Date().getMonth() + 1).toString().padStart(2, '0');
+    document.getElementById('filter-month').value = currentMonthNum;
+
+    // Инициализация Firebase или Локального фоллбэка
+    async function initApp() {
+      if (!isConfigValid) {
+        // Показываем плашку демо-режима
+        document.getElementById('demo-banner').classList.remove('hidden');
+        updateSyncBadge('error', 'Локальный демо-режим');
+        loadInitialDemoData();
+        updateAuthUI(null);
+        return;
+      }
+
+      try {
+        app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+
+        // Отслеживание состояния авторизации
+        onAuthStateChanged(auth, (user) => {
+          window.currentUser = user;
+          updateAuthUI(user);
+          updateSyncBadge('connected', 'Синхронизировано');
+          subscribeToFirestore();
+        });
+      } catch (err) {
+        console.error("Ошибка инициализации Firebase:", err);
+        updateSyncBadge('error', 'Ошибка подключения');
+        loadInitialDemoData();
+        updateAuthUI(null);
+      }
+    }
+
+    // Подписка на коллекцию Firestore 'work_entries'
+    function subscribeToFirestore() {
+      if (!db) return;
+
+      const entriesCollection = collection(db, 'work_entries');
+
+      onSnapshot(entriesCollection, (snapshot) => {
+        const fetched = [];
+        snapshot.forEach((docSnap) => {
+          fetched.push({ id: docSnap.id, ...docSnap.data() });
+        });
+
+        // Если база пуста, заполняем начальными данными для наглядности
+        if (fetched.length === 0 && snapshot.empty && window.currentUser) {
+          seedInitialData();
+          return;
+        }
+
+        window.allEntries = fetched;
+        renderApp();
+      }, (error) => {
+        console.error("Ошибка синхронизации Firestore:", error);
+        updateSyncBadge('error', 'Ошибка сети');
+      });
+    }
+
+    // Заполнение начальных данных (Сентябрь/Июль 2026) при первой инициализации
+    async function seedInitialData() {
+      const initialData = [
+        { date: '2026-07-01', orderNo: '420244', equipment: 'UCS-40.00 nr 02', category: 'H', hours: 5, notes: 'Гидравлические работы' },
+        { date: '2026-07-02', orderNo: '420243', equipment: 'DH-350.11 nr 47', category: 'H', hours: 6, notes: 'Гидравлические работы' },
+        { date: '2026-07-03', orderNo: '410134', equipment: 'WM-15P.00/M nr 22', category: 'S', hours: 1.5, notes: 'Слесарные работы (демонтаж)' },
+        { date: '2026-07-08', orderNo: '410132', equipment: 'WM-15P.00/M nr 26', category: 'H', hours: 20, notes: 'Демонтаж гидравлики' },
+        { date: '2026-07-09', orderNo: '410132', equipment: 'WM-15P.00/M nr 26', category: 'P', hours: 20.5, notes: 'Пневматика' },
+        { date: '2026-07-10', orderNo: '410132', equipment: 'WM-15P.00/M nr 26', category: 'E', hours: 12, notes: 'Электромонтаж' },
+        { date: '2026-07-11', orderNo: '410132', equipment: 'WM-15P.00/M nr 26', category: 'S', hours: 34, notes: 'Сборка узлов' },
+        { date: '2026-07-20', orderNo: '541116', equipment: 'MAB-40', category: 'D+N', hours: 4.5, notes: 'Диагностика и ремонт' }
+      ];
+
+      if (db && window.currentUser) {
+        const colRef = collection(db, 'work_entries');
+        for (const item of initialData) {
+          await addDoc(colRef, item);
+        }
+      }
+    }
+
+    // Демо-данные для автономной работы без ключей Firebase
+    function loadInitialDemoData() {
+      window.allEntries = [
+        { id: 'demo-1', date: '2026-07-01', orderNo: '420244', equipment: 'UCS-40.00 nr 02', category: 'H', hours: 5, notes: 'Гидравлические работы' },
+        { id: 'demo-2', date: '2026-07-02', orderNo: '420243', equipment: 'DH-350.11 nr 47', category: 'H', hours: 6, notes: 'Гидравлика' },
+        { id: 'demo-3', date: '2026-07-08', orderNo: '410132', equipment: 'WM-15P.00/M nr 26', category: 'H', hours: 20, notes: 'Гидравлические работы' },
+        { id: 'demo-4', date: '2026-07-09', orderNo: '410132', equipment: 'WM-15P.00/M nr 26', category: 'P', hours: 20.5, notes: 'Пневматика' }
+      ];
+      renderApp();
+    }
+
+    // =========================================================================
+    // 2. АВТОРИЗАЦИЯ И РАЗДЕЛЕНИЕ ПРАВ
+    // =========================================================================
+
+    // Вход по Email / Паролю
+    window.handleEmailLogin = async function(e) {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value;
+      const errorDiv = document.getElementById('auth-error-msg');
+      errorDiv.classList.add('hidden');
+
+      if (!isConfigValid) {
+        // Симуляция входа в демо-режиме
+        window.currentUser = { email: email || 'master@demo.com' };
+        updateAuthUI(window.currentUser);
+        toggleModal('login-modal');
+        renderApp();
+        return;
+      }
+
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        toggleModal('login-modal');
+      } catch (err) {
+        console.error("Ошибка входа по email:", err);
+        errorDiv.innerText = getAuthErrorMessage(err.code);
+        errorDiv.classList.remove('hidden');
+      }
+    };
+
+    // Вход через Google
+    window.handleGoogleLogin = async function() {
+      const errorDiv = document.getElementById('auth-error-msg');
+      errorDiv.classList.add('hidden');
+
+      if (!isConfigValid) {
+        window.currentUser = { email: 'google.master@demo.com' };
+        updateAuthUI(window.currentUser);
+        toggleModal('login-modal');
+        renderApp();
+        return;
+      }
+
+      try {
+        const provider = new GoogleAuthProvider();
+        await signInWithPopup(auth, provider);
+        toggleModal('login-modal');
+      } catch (err) {
+        console.error("Ошибка входа Google:", err);
+        errorDiv.innerText = getAuthErrorMessage(err.code);
+        errorDiv.classList.remove('hidden');
+      }
+    };
+
+    // Выход из системы
+    window.handleLogout = async function() {
+      if (isConfigValid && auth) {
+        await signOut(auth);
+      } else {
+        window.currentUser = null;
+        updateAuthUI(null);
+        renderApp();
+      }
+    };
+
+    // Перевод ошибок авторизации Firebase на русский язык
+    function getAuthErrorMessage(code) {
+      switch (code) {
+        case 'auth/invalid-credential':
+        case 'auth/wrong-password':
+        case 'auth/user-not-found':
+          return 'Неверный Email или пароль.';
+        case 'auth/invalid-email':
+          return 'Некорректный формат Email адреса.';
+        case 'auth/popup-closed-by-user':
+          return 'Окно авторизации Google было закрыто.';
+        default:
+          return 'Ошибка авторизации. Проверьте данные и повторите попытку.';
+      }
+    }
+
+    // Обновление элементов UI при изменении статуса авторизации
+    function updateAuthUI(user) {
+      const authContainer = document.getElementById('auth-status-container');
+      const masterFormCard = document.getElementById('master-form-card');
+      const readOnlyCard = document.getElementById('read-only-banner-card');
+      const actionHeader = document.getElementById('journal-action-header');
+
+      if (user) {
+        // Показываем плашку авторизованного мастера
+        authContainer.innerHTML = `
+          <div class="flex items-center space-x-2 bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-xl">
+            <i class="fa-solid fa-user-check text-emerald-400 text-xs"></i>
+            <span class="text-xs font-semibold text-slate-200 truncate max-w-[140px]" title="${user.email}">${user.email}</span>
+            <button onclick="handleLogout()" class="text-xs text-rose-400 hover:text-rose-300 font-bold ml-1 transition" title="Выйти">
+              <i class="fa-solid fa-right-from-bracket"></i>
+            </button>
+          </div>
+        `;
+
+        // Показываем форму добавления и колонку действий
+        masterFormCard.classList.remove('hidden');
+        readOnlyCard.classList.add('hidden');
+        if (actionHeader) actionHeader.classList.remove('hidden');
+      } else {
+        // Показываем кнопку входа для начальника/гостя
+        authContainer.innerHTML = `
+          <button onclick="toggleModal('login-modal')" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl transition flex items-center space-x-1.5 shadow-sm">
+            <i class="fa-solid fa-key"></i>
+            <span>Вход мастера</span>
+          </button>
+        `;
+
+        // Скрываем форму добавления, показываем баннер просмотра
+        masterFormCard.classList.add('hidden');
+        readOnlyCard.classList.remove('hidden');
+        if (actionHeader) actionHeader.classList.add('hidden');
+      }
+    }
+
+    // =========================================================================
+    // 3. ДОБАВЛЕНИЕ И УДАЛЕНИЕ СМЕН
+    // =========================================================================
+
+    // Обработчик добавления смены
+    window.handleAddEntry = async function(e) {
+      e.preventDefault();
+      if (!window.currentUser) {
+        alert("Добавление записей доступно только авторизованному мастеру.");
+        return;
+      }
+      
+      const entry = {
+        date: document.getElementById('input-date').value,
+        orderNo: document.getElementById('input-order').value.trim(),
+        hours: parseFloat(document.getElementById('input-hours').value),
+        equipment: document.getElementById('input-equipment').value.trim(),
+        category: document.getElementById('input-category').value,
+        notes: document.getElementById('input-notes').value.trim(),
+        createdAt: new Date().toISOString()
+      };
+
+      if (!entry.orderNo || !entry.equipment || isNaN(entry.hours)) return;
+
+      if (isConfigValid && db) {
+        try {
+          const colRef = collection(db, 'work_entries');
+          await addDoc(colRef, entry);
+        } catch (err) {
+          console.error("Ошибка сохранения в Firestore:", err);
+          alert("Не удалось сохранить запись. Проверьте правила безопасности Firestore.");
+        }
+      } else {
+        // Фоллбэк сохранения в память
+        entry.id = 'demo-' + Date.now();
+        window.allEntries.push(entry);
+        renderApp();
+      }
+
+      // Очистка формы
+      document.getElementById('input-hours').value = '';
+      document.getElementById('input-notes').value = '';
+    };
+
+    // Окно подтверждения удаления
+    window.openDeleteModal = function(id) {
+      if (!window.currentUser) return;
+      window.pendingDeleteId = id;
+      document.getElementById('delete-modal').classList.remove('hidden');
+    };
+
+    window.closeDeleteModal = function() {
+      window.pendingDeleteId = null;
+      document.getElementById('delete-modal').classList.add('hidden');
+    };
+
+    document.getElementById('confirm-delete-btn').addEventListener('click', async () => {
+      const id = window.pendingDeleteId;
+      if (!id || !window.currentUser) return;
+
+      if (isConfigValid && db) {
+        try {
+          const docRef = doc(db, 'work_entries', id);
+          await deleteDoc(docRef);
+        } catch (err) {
+          console.error("Ошибка удаления из Firestore:", err);
+          alert("Не удалось удалить запись. Проверьте права доступа.");
+        }
+      } else {
+        window.allEntries = window.allEntries.filter(e => e.id !== id);
+        renderApp();
+      }
+      closeDeleteModal();
+    });
+
+    // =========================================================================
+    // 4. ВСПОМОГАТЕЛЬНЫЕ UI ФУНКЦИИ И ОТРИСОВКА
+    // =========================================================================
+
+    function updateSyncBadge(status, text) {
+      const badge = document.getElementById('cloud-badge');
+      const pingRing = document.getElementById('ping-ring');
+      const pingDot = document.getElementById('ping-dot');
+      const syncText = document.getElementById('sync-text');
+
+      if (!badge || !syncText) return;
+      syncText.innerText = text;
+
+      if (status === 'connected') {
+        badge.className = "hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-medium bg-emerald-950/60 text-emerald-400 border border-emerald-800";
+        pingRing.className = "animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75";
+        pingDot.className = "relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500";
+      } else if (status === 'error') {
+        badge.className = "hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-medium bg-rose-950/60 text-rose-400 border border-rose-800";
+        pingRing.className = "hidden";
+        pingDot.className = "relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500";
+      }
+    }
+
+    window.toggleModal = function(modalId) {
+      document.getElementById(modalId).classList.toggle('hidden');
+    };
+
+    // Автоподсказки для заказов и оборудования
+    function updateAutocompletes() {
+      const ordersSet = new Set();
+      const orderToEquipment = {};
+
+      (window.allEntries || []).forEach(item => {
+        if (item.orderNo) {
+          const ord = item.orderNo.trim();
+          ordersSet.add(ord);
+          if (item.equipment && !orderToEquipment[ord]) {
+            orderToEquipment[ord] = item.equipment.trim();
+          }
+        }
+      });
+
+      const ordersList = document.getElementById('orders-list');
+      if (ordersList) {
+        ordersList.innerHTML = Array.from(ordersSet)
+          .map(ord => `<option value="${ord}">${orderToEquipment[ord] ? orderToEquipment[ord] : ''}</option>`)
+          .join('');
+      }
+
+      const currentOrder = document.getElementById('input-order')?.value.trim() || '';
+      updateEquipmentDatalist(currentOrder);
+    }
+
+    function updateEquipmentDatalist(orderNo) {
+      const equipmentList = document.getElementById('equipment-list');
+      if (!equipmentList) return;
+
+      const equipmentSet = new Set();
+      (window.allEntries || []).forEach(item => {
+        if (item.equipment) {
+          if (orderNo) {
+            if (item.orderNo && item.orderNo.trim() === orderNo) {
+              equipmentSet.add(item.equipment.trim());
+            }
+          } else {
+            equipmentSet.add(item.equipment.trim());
+          }
+        }
+      });
+
+      equipmentList.innerHTML = Array.from(equipmentSet)
+        .map(eq => `<option value="${eq}">`)
+        .join('');
+    }
+
+    document.getElementById('input-order')?.addEventListener('input', (e) => {
+      const val = e.target.value.trim();
+      updateEquipmentDatalist(val);
+
+      if (!val) return;
+      const match = (window.allEntries || []).find(item => item.orderNo && item.orderNo.trim() === val);
+      if (match && match.equipment) {
+        const eqInput = document.getElementById('input-equipment');
+        if (eqInput && !eqInput.value) {
+          eqInput.value = match.equipment;
+        }
+      }
+    });
+
+    // Главная функция рендеринга приложения
+    window.renderApp = function() {
+      updateAutocompletes();
+      const filterMonth = document.getElementById('filter-month').value;
+      const filterYear = document.getElementById('filter-year').value;
+
+      // Фильтрация записей по месяцу и году
+      const filtered = window.allEntries.filter(entry => {
+        if (!entry.date) return false;
+        const [y, m] = entry.date.split('-');
+        return y === filterYear && m === filterMonth;
+      }).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      // Расчет общего количества отработанных часов
+      const totalHours = filtered.reduce((sum, item) => sum + (parseFloat(item.hours) || 0), 0);
+      document.getElementById('total-hours-stat').innerHTML = `${totalHours.toFixed(1).replace('.0', '')} <span class="text-sm font-normal opacity-90">ч</span>`;
+
+      // Расчет сводной аналитической таблицы (Pivot)
+      const pivotMap = {};
+      filtered.forEach(item => {
+        const key = `${item.orderNo}||${item.equipment}`;
+        if (!pivotMap[key]) {
+          pivotMap[key] = { orderNo: item.orderNo, equipment: item.equipment, H: 0, P: 0, E: 0, S: 0, 'D+N': 0, total: 0 };
+        }
+        const cat = item.category || 'S';
+        const hrs = parseFloat(item.hours) || 0;
+        if (pivotMap[key][cat] !== undefined) {
+          pivotMap[key][cat] += hrs;
+        }
+        pivotMap[key].total += hrs;
+      });
+
+      // Отрисовка сводной таблицы Pivot
+      const pivotTbody = document.getElementById('pivot-tbody');
+      pivotTbody.innerHTML = '';
+
+      const pivotKeys = Object.keys(pivotMap);
+      if (pivotKeys.length === 0) {
+        pivotTbody.innerHTML = `<tr><td colSpan="7" class="text-center py-6 text-slate-400 font-normal">Нет записей за выбранный месяц</td></tr>`;
+      } else {
+        pivotKeys.forEach(key => {
+          const row = pivotMap[key];
+          pivotTbody.innerHTML += `
+            <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+              <td class="p-3">
+                <div class="font-bold text-slate-800">${row.orderNo}</div>
+                <div class="text-[11px] text-slate-500">${row.equipment}</div>
+              </td>
+              <td class="p-3 text-center border-l border-slate-100 text-blue-700 font-semibold">${row.H > 0 ? row.H : '-'}</td>
+              <td class="p-3 text-center text-sky-700 font-semibold">${row.P > 0 ? row.P : '-'}</td>
+              <td class="p-3 text-center text-amber-700 font-semibold">${row.E > 0 ? row.E : '-'}</td>
+              <td class="p-3 text-center text-slate-700 font-semibold">${row.S > 0 ? row.S : '-'}</td>
+              <td class="p-3 text-center text-purple-700 font-semibold">${row['D+N'] > 0 ? row['D+N'] : '-'}</td>
+              <td class="p-3 text-center font-extrabold text-indigo-700 border-l border-slate-100 bg-indigo-50/50">${row.total}</td>
+            </tr>
+          `;
+        });
+      }
+
+      // Отрисовка Журнала Записей
+      const journalTbody = document.getElementById('journal-tbody');
+      journalTbody.innerHTML = '';
+      document.getElementById('entries-count-badge').innerText = `${filtered.length} записей`;
+
+      if (filtered.length === 0) {
+        const colSpan = window.currentUser ? 6 : 5;
+        journalTbody.innerHTML = `<tr><td colSpan="${colSpan}" class="text-center py-6 text-slate-400 font-normal">Журнал пуст</td></tr>`;
+      } else {
+        filtered.forEach(item => {
+          const categoryBadges = {
+            'H': 'bg-blue-100 text-blue-700',
+            'P': 'bg-sky-100 text-sky-700',
+            'E': 'bg-amber-100 text-amber-700',
+            'S': 'bg-slate-200 text-slate-700',
+            'D+N': 'bg-purple-100 text-purple-700'
+          };
+          const badgeClass = categoryBadges[item.category] || 'bg-slate-100 text-slate-700';
+          const formattedDate = new Date(item.date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+
+          const actionTd = window.currentUser 
+            ? `<td class="p-3 text-center">
+                 <button onclick="openDeleteModal('${item.id}')" class="text-slate-400 hover:text-red-600 p-1 transition" title="Удалить">
+                   <i class="fa-regular fa-trash-can text-sm"></i>
+                 </button>
+               </td>`
+            : '';
+
+          journalTbody.innerHTML += `
+            <tr class="hover:bg-slate-50/80 transition">
+              <td class="p-3 text-slate-600 whitespace-nowrap font-medium">${formattedDate}</td>
+              <td class="p-3 font-bold text-slate-800">${item.orderNo}</td>
+              <td class="p-3">
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${badgeClass}">${item.category}</span>
+              </td>
+              <td class="p-3 font-bold text-right text-slate-800">${item.hours}</td>
+              <td class="p-3 text-slate-500 max-w-[160px] truncate" title="${item.notes || ''}">${item.notes || '-'}</td>
+              ${actionTd}
+            </tr>
+          `;
+        });
+      }
+    };
+
+    // Запуск приложения
+    initApp();
+  </script>
+</body>
+</html>
