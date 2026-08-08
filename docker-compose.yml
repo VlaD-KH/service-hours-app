@@ -1,0 +1,9 @@
+version: '3.8'
+
+services:
+  zps-service-hours:
+    build: .
+    container_name: zps_service_hours_app
+    ports:
+      - "8080:80"
+    restart: always
