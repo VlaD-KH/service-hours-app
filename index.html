@@ -1860,7 +1860,7 @@
                   <td class="p-3 text-center text-slate-400 font-normal">&mdash;</td>
                   <td class="p-3 text-center text-slate-400 font-normal">&mdash;</td>
                   <td class="p-3 text-slate-500">
-                    <button onclick="window.fillWorkForShift('${item.date}', ${item.shiftDuration})" class="text-amber-700 hover:text-amber-800 font-semibold flex items-center space-x-1 hover:underline text-left cursor-pointer">
+                    <button onclick="window.fillWorkForShift('${escapeHTML(item.date)}', ${Number(item.shiftDuration) || 0})" class="text-amber-700 hover:text-amber-800 font-semibold flex items-center space-x-1 hover:underline text-left cursor-pointer">
                       <i class="fa-solid fa-circle-exclamation text-xs text-amber-500 animate-pulse"></i>
                       <span>${escapeHTML(item.notes)}</span>
                     </button>
