@@ -1,6 +1,6 @@
 # =========================================================================
-# NETLIFY DEPLOYMENT CONFIGURATION
-# Runs build-env.js before publishing static SPA
+# КОНФИГУРАЦИЯ СБОРКИ И ДЕПЛОЯ NETLIFY
+# Запускает build-env.js перед публикацией статического приложения
 # =========================================================================
 [build]
   command = "node build-env.js"
