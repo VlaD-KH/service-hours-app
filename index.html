@@ -950,8 +950,10 @@
 
     window._unsubFirestore = null;
 
+    // Инициализация Firebase или Локального фоллбэка
     async function initApp() {
       applyLanguageUI();
+      loadEquipmentKnowledge();
 
       if (!isConfigValid) {
         document.getElementById('demo-banner').classList.remove('hidden');
@@ -1515,8 +1517,24 @@
     };
 
     // =========================================================================
-    // 6. ГОЛОСОВОЙ ИИ-ПОМОЩНИК И ПАРСИНГ СМЕН
+    // 6. ГОЛОСОВОЙ ИИ-ПОМОЩНИК И RAG-ПАРСИНГ СМЕН (EQUIPMENT KNOWLEDGE BASE)
     // =========================================================================
+
+    window.equipmentKnowledge = null;
+    window.isSpeechRecording = false;
+    window.speechRecognitionInstance = null;
+    window.speechTranscriptAccumulator = '';
+
+    async function loadEquipmentKnowledge() {
+      try {
+        const res = await fetch('equipment_knowledge.json');
+        if (res.ok) {
+          window.equipmentKnowledge = await res.json();
+        }
+      } catch (err) {
+        console.warn("RAG Knowledge base load error:", err);
+      }
+    }
 
     window.handleAiFabClick = function() {
       if (!window.currentUser) {
@@ -1527,6 +1545,14 @@
       const isModelDownloaded = localStorage.getItem('service_hours_ai_downloaded') === 'true';
       if (!isModelDownloaded) {
         toggleModal('ai-download-modal');
+      } else {
+        toggleSpeechDictation();
+      }
+    };
+
+    window.toggleSpeechDictation = function() {
+      if (window.isSpeechRecording) {
+        stopSpeechDictation(true);
       } else {
         startSpeechDictation();
       }
@@ -1553,7 +1579,7 @@
             if (actions) actions.classList.remove('hidden');
             if (progressBox) progressBox.classList.add('hidden');
             if (progressBar) progressBar.style.width = '0%';
-            startSpeechDictation();
+            toggleSpeechDictation();
           }, 600);
         }
         if (progressBar) progressBar.style.width = `${currentPercent}%`;
@@ -1574,94 +1600,171 @@
             : window.currentLang === 'en' 
             ? "Dictate entry (type work summary):" 
             : "Надиктуйте смену (введите текст выполненных работ):",
-          "4 часа гидравлика заказ 410132 WM-15P демонтаж фильтра"
+          "сегодня в 7:15 2:00 пневматика"
         );
         if (fallbackText) parseShiftFromTranscript(fallbackText);
         return;
       }
 
+      window.speechTranscriptAccumulator = '';
+      window.isSpeechRecording = true;
+
       const recognition = new SpeechRecognition();
+      window.speechRecognitionInstance = recognition;
+
       const langMap = { ru: 'ru-RU', pl: 'pl-PL', en: 'en-US' };
       recognition.lang = langMap[window.currentLang] || 'ru-RU';
-      recognition.interimResults = false;
+      recognition.continuous = true;
+      recognition.interimResults = true;
 
-      if (fabBtn) fabBtn.classList.add('animate-bounce');
+      // 1-й клик: Красный пульс кнопки СТОП на время непрерывной записи
+      if (fabBtn) {
+        fabBtn.classList.remove('from-blue-600', 'to-indigo-600', 'hover:from-blue-700', 'hover:to-indigo-700');
+        fabBtn.classList.add('from-rose-600', 'to-red-600', 'hover:from-rose-700', 'hover:to-red-700', 'animate-pulse');
+      }
       if (fabPing) fabPing.classList.remove('hidden');
-      if (fabIcon) fabIcon.className = "fa-solid fa-microphone-lines text-xl text-emerald-300";
-
-      recognition.start();
+      if (fabIcon) fabIcon.className = "fa-solid fa-square text-lg text-white";
 
       recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        if (fabBtn) fabBtn.classList.remove('animate-bounce');
-        if (fabPing) fabPing.classList.add('hidden');
-        if (fabIcon) fabIcon.className = "fa-solid fa-microphone text-xl";
-
-        parseShiftFromTranscript(transcript);
+        let currentString = '';
+        for (let i = 0; i < event.results.length; ++i) {
+          currentString += event.results[i][0].transcript + ' ';
+        }
+        window.speechTranscriptAccumulator = currentString.trim();
       };
 
       recognition.onerror = (err) => {
         console.warn("Speech recognition error:", err);
-        if (fabBtn) fabBtn.classList.remove('animate-bounce');
-        if (fabPing) fabPing.classList.add('hidden');
-        if (fabIcon) fabIcon.className = "fa-solid fa-microphone text-xl";
-
-        const fallbackText = prompt(
-          window.currentLang === 'pl' 
-            ? "Wpisz podyktowany tekst:" 
-            : window.currentLang === 'en' 
-            ? "Type dictated summary:" 
-            : "Введите текст смены:",
-          "4 часа гидравлика заказ 410132 WM-15P демонтаж фильтра"
-        );
-        if (fallbackText) parseShiftFromTranscript(fallbackText);
       };
 
       recognition.onend = () => {
-        if (fabBtn) fabBtn.classList.remove('animate-bounce');
-        if (fabPing) fabPing.classList.add('hidden');
-        if (fabIcon) fabIcon.className = "fa-solid fa-microphone text-xl";
+        // Если запись была непрерывной и прервалась тишиной — перезапускаем до 2-го клика пользователя
+        if (window.isSpeechRecording && window.speechRecognitionInstance) {
+          try { recognition.start(); } catch(e){}
+        }
       };
+
+      try {
+        recognition.start();
+      } catch (err) {
+        console.error("Recognition start error:", err);
+      }
     };
 
+    window.stopSpeechDictation = function(shouldParse = true) {
+      window.isSpeechRecording = false;
+      const fabBtn = document.getElementById('ai-fab-btn');
+      const fabIcon = document.getElementById('ai-fab-icon');
+      const fabPing = document.getElementById('ai-fab-ping');
+
+      // Возврат синего стиля кнопки FAB
+      if (fabBtn) {
+        fabBtn.classList.remove('from-rose-600', 'to-red-600', 'hover:from-rose-700', 'hover:to-red-700', 'animate-pulse');
+        fabBtn.classList.add('from-blue-600', 'to-indigo-600', 'hover:from-blue-700', 'hover:to-indigo-700');
+      }
+      if (fabPing) fabPing.classList.add('hidden');
+      if (fabIcon) fabIcon.className = "fa-solid fa-microphone text-xl";
+
+      if (window.speechRecognitionInstance) {
+        const instance = window.speechRecognitionInstance;
+        window.speechRecognitionInstance = null;
+        try { instance.stop(); } catch(e){}
+      }
+
+      const resultText = window.speechTranscriptAccumulator.trim();
+      if (shouldParse && resultText) {
+        parseShiftFromTranscript(resultText);
+      }
+    };
+
+    // RAG-Сопоставитель сущностей (Fuzzy RAG Entity Matcher)
     window.parseShiftFromTranscript = function(text) {
       if (!text) return;
       document.getElementById('ai-raw-transcript').innerText = `"${text}"`;
 
-      // 1. Поиск номера заказа (4-6 цифр)
-      const orderMatch = text.match(/\b\d{4,6}\b/);
-      const extractedOrder = orderMatch ? orderMatch[0] : (document.getElementById('input-order')?.value || '');
+      let processedText = text;
+      let matchedEquip = '';
+      let matchedOrder = '';
 
-      // 2. Поиск отработанных часов (например: "4.5 часа", "3 godz", "5 hours")
-      const hoursMatch = text.match(/(\d+[.,]?\d*)\s*(час|ч|godz|hour|h)/i) || text.match(/\b(\d+[.,]?\d*)\b/);
+      const knowledge = window.equipmentKnowledge || {};
+      const knownEquipList = knowledge.known_equipment || [];
+      const knownOrdersList = knowledge.known_orders || [];
+      const lowerText = text.toLowerCase();
+
+      // 1. RAG Поиск оборудования через equipment_knowledge.json (включая опечатки вида "7:15")
+      for (const item of knownEquipList) {
+        for (const alias of item.aliases) {
+          if (lowerText.includes(alias.toLowerCase())) {
+            matchedEquip = item.full_name;
+            // Вырезаем найденный синоним (например "7:15"), чтобы он не сбивал парсер часов!
+            const escapedAlias = alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            processedText = processedText.replace(new RegExp(escapedAlias, 'gi'), ' ');
+            break;
+          }
+        }
+        if (matchedEquip) break;
+      }
+
+      // 2. Dynamic RAG: Поиск оборудования по имеющимся в БД Firestore записям
+      if (!matchedEquip && window.allEntries) {
+        for (const entry of window.allEntries) {
+          if (entry.equipment && lowerText.includes(entry.equipment.toLowerCase())) {
+            matchedEquip = entry.equipment;
+            break;
+          }
+        }
+      }
+
+      // 3. Резервный Regex поиск оборудования (WM-15P, MAB-40, DH-350, UCS-40, BOMAR)
+      if (!matchedEquip) {
+        const equipMatch = processedText.match(/\b(wm-?\d+\w*|mab-?\d+|dh-?\d+|ucs-?\d+|bomar\w*)\b/i);
+        if (equipMatch) {
+          matchedEquip = equipMatch[0].toUpperCase();
+        }
+      }
+
+      // 4. RAG Поиск номера заказа (4-6 цифр или текстовый синоним)
+      for (const item of knownOrdersList) {
+        for (const alias of item.aliases) {
+          if (lowerText.includes(alias.toLowerCase())) {
+            matchedOrder = item.orderNo;
+            break;
+          }
+        }
+        if (matchedOrder) break;
+      }
+      if (!matchedOrder) {
+        const orderMatch = processedText.match(/\b\d{4,6}\b/);
+        if (orderMatch) matchedOrder = orderMatch[0];
+      }
+      if (!matchedOrder && matchedEquip && window.allEntries) {
+        const knownMatch = window.allEntries.find(e => e.equipment === matchedEquip && e.orderNo);
+        if (knownMatch) matchedOrder = knownMatch.orderNo;
+      }
+
+      // 5. Поиск отработанных часов (из очищенного от "7:15" текста!)
+      const hoursMatch = processedText.match(/(\d+[.,]?\d*)\s*(час|ч|godz|hour|h)/i) || processedText.match(/\b(\d+[.,]?\d*)\b/);
       let extractedHours = '';
       if (hoursMatch) {
-        extractedHours = parseFloat(hoursMatch[1].replace(',', '.')) || '';
+        const parsedVal = parseFloat(hoursMatch[1].replace(',', '.'));
+        if (!isNaN(parsedVal) && parsedVal <= 24) {
+          extractedHours = parsedVal;
+        }
       }
 
-      // 3. Поиск оборудования (WM-15P, MAB-40, DH-350, UCS-40)
-      let extractedEquip = '';
-      const equipMatch = text.match(/\b(wm-?\d+\w*|mab-?\d+|dh-?\d+|ucs-?\d+|bomar\w*)\b/i);
-      if (equipMatch) {
-        extractedEquip = equipMatch[0].toUpperCase();
-      } else {
-        const knownMatch = (window.allEntries || []).find(e => e.orderNo === extractedOrder && e.equipment);
-        extractedEquip = knownMatch ? knownMatch.equipment : '';
-      }
-
-      // 4. Определение категории категорий (H, P, E, S, D+N)
+      // 6. Определение категории категорий (H, P, E, S, D+N)
       let extractedCat = 'S';
-      const lower = text.toLowerCase();
-      if (lower.includes('гидр') || lower.includes('hydr')) extractedCat = 'H';
-      else if (lower.includes('пневм') || lower.includes('pneum')) extractedCat = 'P';
-      else if (lower.includes('электр') || lower.includes('elektr') || lower.includes('elec')) extractedCat = 'E';
-      else if (lower.includes('диаг') || lower.includes('ремонт') || lower.includes('diag') || lower.includes('napraw')) extractedCat = 'D+N';
-      else if (lower.includes('слесар') || lower.includes('ślusar') || lower.includes('fit')) extractedCat = 'S';
+      const cleanLower = processedText.toLowerCase();
+      if (cleanLower.includes('гидр') || cleanLower.includes('hydr')) extractedCat = 'H';
+      else if (cleanLower.includes('пневм') || cleanLower.includes('pneum')) extractedCat = 'P';
+      else if (cleanLower.includes('электр') || cleanLower.includes('elektr') || cleanLower.includes('elec')) extractedCat = 'E';
+      else if (cleanLower.includes('диаг') || cleanLower.includes('ремонт') || cleanLower.includes('diag') || cleanLower.includes('napraw')) extractedCat = 'D+N';
+      else if (cleanLower.includes('слесар') || cleanLower.includes('ślusar') || cleanLower.includes('fit')) extractedCat = 'S';
 
       // Заполнение модалки подтверждения
-      document.getElementById('ai-input-order').value = extractedOrder;
+      document.getElementById('ai-input-order').value = matchedOrder;
       document.getElementById('ai-input-hours').value = extractedHours;
-      document.getElementById('ai-input-equipment').value = extractedEquip;
+      document.getElementById('ai-input-equipment').value = matchedEquip;
       document.getElementById('ai-input-category').value = extractedCat;
       document.getElementById('ai-input-notes').value = text;
 
