@@ -1134,16 +1134,21 @@
       window._unsubShifts = onSnapshot(shiftsCollection, (snapshot) => {
         const shifts = [];
         snapshot.forEach((docSnap) => {
-          shifts.push({ id: docSnap.id, ...docSnap.data() });
+          shifts.push({ id: docSnap.id, firestoreId: docSnap.id, ...docSnap.data() });
         });
-        window.allShifts = shifts;
+
+        // Объединяем с локальным хранилищем localStorage
+        const local = loadLocalShifts();
+        const mergedMap = new Map();
+        local.forEach(s => mergedMap.set(s.date, s));
+        shifts.forEach(s => mergedMap.set(s.date, s));
+        window.allShifts = Array.from(mergedMap.values());
 
         // Восстановление активной смены при перезагрузке страницы
-        const activeShift = shifts.find(s => s.timeStart && !s.timeEnd && s.masterEmail === (window.currentUser?.email || ''));
+        const activeShift = window.allShifts.find(s => s.timeStart && !s.timeEnd && s.masterEmail === (window.currentUser?.email || ''));
         if (activeShift && !window.isShiftActive) {
           window.isShiftActive = true;
-          window.currentShiftDocId = activeShift.id;
-          // Восстановление времени начала из сохранённых данных
+          window.currentShiftDocId = activeShift.firestoreId || activeShift.id;
           const [h, m] = (activeShift.timeStart || '00:00').split(':').map(Number);
           const restored = new Date();
           restored.setHours(h, m, 0, 0);
@@ -1153,7 +1158,9 @@
 
         renderApp();
       }, (error) => {
-        console.error("Shifts sync error:", error);
+        console.warn("Shifts sync warning (using local shifts):", error);
+        window.allShifts = loadLocalShifts();
+        renderApp();
       });
     }
 
@@ -1452,33 +1459,27 @@
           renderApp();
         }
       } else if (shiftId) {
+        // Удаляем из localStorage
+        const localShifts = loadLocalShifts().filter(s => s.id !== shiftId && s.firestoreId !== shiftId);
+        saveLocalShifts(localShifts);
+        window.allShifts = localShifts;
+
         if (isConfigValid && db) {
           try {
             const docRef = doc(db, 'work_shifts', shiftId);
             await deleteDoc(docRef);
-            
-            // Если удалена текущая активная смена, сбрасываем ее состояние
-            if (shiftId === window.currentShiftDocId) {
-              window.isShiftActive = false;
-              window.currentShiftDocId = null;
-              window.shiftStartTimestamp = null;
-              updateShiftUI(false);
-            }
           } catch (err) {
-            console.error("Delete shift error:", err);
-            alert("Не удалось удалить смену.");
+            console.warn("Delete shift Firestore warning:", err);
           }
-        } else {
-          window.allShifts = window.allShifts.filter(s => s.id !== shiftId);
-          // Сброс активной смены в демо-режиме
-          if (shiftId === window.currentShiftDocId) {
-            window.isShiftActive = false;
-            window.currentShiftDocId = null;
-            window.shiftStartTimestamp = null;
-            updateShiftUI(false);
-          }
-          renderApp();
         }
+
+        if (shiftId === window.currentShiftDocId) {
+          window.isShiftActive = false;
+          window.currentShiftDocId = null;
+          window.shiftStartTimestamp = null;
+          updateShiftUI(false);
+        }
+        renderApp();
       }
       closeDeleteModal();
     });
@@ -2042,14 +2043,38 @@
       }
     }
 
-    // НАЧАЛО СМЕНЫ: GPS-снапшот + создание документа в Firestore
+    // Вспомогательные функции даты и локального кэша смен (localStorage)
+    function getLocalDateString() {
+      const d = new Date();
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+
+    function loadLocalShifts() {
+      try {
+        const raw = localStorage.getItem('service_hours_shifts');
+        return raw ? JSON.parse(raw) : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function saveLocalShifts(shifts) {
+      try {
+        localStorage.setItem('service_hours_shifts', JSON.stringify(shifts));
+      } catch (e) {}
+    }
+
+    // НАЧАЛО СМЕНЫ: GPS-снапшот + создание документа в Firestore / localStorage
     async function handleShiftStart() {
       const t = translations[window.currentLang] || translations.ru;
-      const today = new Date().toISOString().split('T')[0];
+      const today = getLocalDateString();
 
-      // Защита от двойного старта: проверка по дате
-      const existingShift = (window.allShifts || []).find(s => s.date === today && s.masterEmail === window.currentUser.email);
-      if (existingShift) {
+      // Защита от двойного старта: проверяем незавершенную активную смену
+      const activeShift = (window.allShifts || []).find(s => s.date === today && s.masterEmail === (window.currentUser?.email || '') && !s.timeEnd);
+      if (activeShift) {
         showToast(t.shift_active_warning, 'warning');
         return;
       }
@@ -2064,6 +2089,7 @@
       const timeStart = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
 
       const shiftData = {
+        id: 'shift-' + Date.now(),
         date: today,
         timeStart: timeStart,
         timeEnd: null,
@@ -2071,34 +2097,36 @@
         lngStart: gps.lng,
         latEnd: null,
         lngEnd: null,
-        masterEmail: window.currentUser.email
+        masterEmail: window.currentUser ? window.currentUser.email : 'master'
       };
+
+      // Всегда мгновенно сохраняем в localStorage
+      const localShifts = loadLocalShifts();
+      // Удаляем старые незавершенные смены за сегодня если есть
+      const filteredShifts = localShifts.filter(s => s.date !== today || s.timeEnd);
+      filteredShifts.push(shiftData);
+      saveLocalShifts(filteredShifts);
+      window.allShifts = filteredShifts;
+      window.currentShiftDocId = shiftData.id;
 
       if (isConfigValid && db) {
         try {
-          const docRef = await addDoc(collection(db, 'work_shifts'), shiftData);
+          const docRef = await addDoc(collection(db, 'work_shifts'), { ...shiftData });
+          shiftData.firestoreId = docRef.id;
           window.currentShiftDocId = docRef.id;
         } catch (err) {
-          console.error('Ошибка создания смены:', err);
-          showToast('Ошибка сохранения смены: ' + (err.code || err.message || err), 'error');
-          return;
+          console.warn('Firestore write warning for work_shifts:', err);
         }
-      } else {
-        // Демо-режим: локальное сохранение
-        const demoId = 'shift-demo-' + Date.now();
-        shiftData.id = demoId;
-        window.allShifts.push(shiftData);
-        window.currentShiftDocId = demoId;
-        renderApp();
       }
 
       window.isShiftActive = true;
       window.shiftStartTimestamp = now.getTime();
       updateShiftUI(true);
       showToast(t.shift_started_toast, 'success');
+      renderApp();
     }
 
-    // ЗАВЕРШЕНИЕ СМЕНЫ: GPS-снапшот + обновление документа в Firestore
+    // ЗАВЕРШЕНИЕ СМЕНЫ: GPS-снапшот + обновление документа в Firestore / localStorage
     async function handleShiftStop() {
       const t = translations[window.currentLang] || translations.ru;
 
@@ -2111,6 +2139,17 @@
       const now = new Date();
       const timeEnd = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
 
+      // Обновляем локально сначала
+      const localShifts = loadLocalShifts();
+      const localShift = localShifts.find(s => s.id === window.currentShiftDocId || s.firestoreId === window.currentShiftDocId || (s.date === getLocalDateString() && !s.timeEnd));
+      if (localShift) {
+        localShift.timeEnd = timeEnd;
+        localShift.latEnd = gps.lat;
+        localShift.lngEnd = gps.lng;
+        saveLocalShifts(localShifts);
+        window.allShifts = localShifts;
+      }
+
       if (isConfigValid && db && window.currentShiftDocId) {
         try {
           const shiftRef = doc(db, 'work_shifts', window.currentShiftDocId);
@@ -2120,17 +2159,8 @@
             lngEnd: gps.lng
           });
         } catch (err) {
-          console.error('Ошибка обновления смены:', err);
+          console.warn('Firestore update warning for work_shifts:', err);
         }
-      } else if (window.currentShiftDocId) {
-        // Демо-режим: локальное обновление
-        const localShift = window.allShifts.find(s => s.id === window.currentShiftDocId);
-        if (localShift) {
-          localShift.timeEnd = timeEnd;
-          localShift.latEnd = gps.lat;
-          localShift.lngEnd = gps.lng;
-        }
-        renderApp();
       }
 
       // Вычислим отработанные часы смены
@@ -2140,13 +2170,14 @@
         durationHours = Math.max(0.1, Math.round((diffMs / (1000 * 60 * 60)) * 10) / 10);
       }
 
-      const today = new Date().toISOString().split('T')[0];
+      const today = getLocalDateString();
 
       window.isShiftActive = false;
       window.currentShiftDocId = null;
       window.shiftStartTimestamp = null;
       updateShiftUI(false);
       showToast(t.shift_stopped_toast, 'success');
+      renderApp();
 
       // Автоматическое заполнение формы добавления работы
       window.fillWorkForShift(today, durationHours);
