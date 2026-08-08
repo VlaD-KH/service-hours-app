@@ -483,7 +483,8 @@
       doc, 
       addDoc, 
       deleteDoc, 
-      onSnapshot 
+      onSnapshot,
+      writeBatch
     } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     // =========================================================================
@@ -926,7 +927,6 @@
       const aiBtnDiscard = document.getElementById('i18n-ai-btn-discard');
       if (aiBtnDiscard) aiBtnDiscard.innerText = t.ai_btn_discard;
 
-      // Обновление селектора месяцев
       const monthSelect = document.getElementById('filter-month');
       const selectedValue = monthSelect.value || (new Date().getMonth() + 1).toString().padStart(2, '0');
       monthSelect.innerHTML = t.months.map((m, idx) => {
@@ -937,17 +937,13 @@
       updateAuthUI(window.currentUser);
     }
 
-    // Установка даты по умолчанию (Сегодня)
     const _dateInput = document.getElementById('input-date');
     if (_dateInput) _dateInput.value = new Date().toISOString().split('T')[0];
 
-    // Утилита экранирования HTML для защиты от XSS
     const escapeHTML = (str) => String(str || '').replace(/[&<>'"]/g, tag => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[tag] || tag));
 
-    // Ссылка на отписку от Firestore для предотвращения утечек памяти
     window._unsubFirestore = null;
 
-    // Инициализация Firebase или Локального фоллбэка
     async function initApp() {
       applyLanguageUI();
 
@@ -978,10 +974,8 @@
       }
     }
 
-    // Подписка на коллекцию Firestore 'work_entries'
     function subscribeToFirestore() {
       if (!db) return;
-      // Отменяем предыдущую подписку для предотвращения утечки памяти
       if (window._unsubFirestore) window._unsubFirestore();
       const entriesCollection = collection(db, 'work_entries');
 
@@ -991,7 +985,7 @@
           fetched.push({ id: docSnap.id, ...docSnap.data() });
         });
 
-        if (fetched.length === 0 && snapshot.empty && window.currentUser) {
+        if (fetched.length === 0 && snapshot.empty && window.currentUser && isUserMaster(window.currentUser)) {
           seedInitialData();
           return;
         }
@@ -1004,7 +998,7 @@
       });
     }
 
-    // Заполнение начальных данных
+    // Заполнение начальных данных (Оптимизировано через writeBatch)
     async function seedInitialData() {
       const initialData = [
         { date: '2026-07-01', orderNo: '420244', equipment: 'UCS-40.00 nr 02', category: 'H', hours: 5, notes: 'Гидравлические работы' },
@@ -1017,10 +1011,16 @@
         { date: '2026-07-20', orderNo: '541116', equipment: 'MAB-40', category: 'D+N', hours: 4.5, notes: 'Диагностика и ремонт' }
       ];
 
-      if (db && window.currentUser) {
-        const colRef = collection(db, 'work_entries');
-        for (const item of initialData) {
-          await addDoc(colRef, item);
+      if (db && window.currentUser && isUserMaster(window.currentUser)) {
+        try {
+          const colRef = collection(db, 'work_entries');
+          const batch = writeBatch(db);
+          initialData.forEach(item => {
+            batch.set(doc(colRef), item);
+          });
+          await batch.commit();
+        } catch (err) {
+          console.error("Batch seed error:", err);
         }
       }
     }
@@ -1037,49 +1037,79 @@
     }
 
     // =========================================================================
-    // 3. АВТОРИЗАЦИЯ И РАЗДЕЛЕНИЕ ПРАВ
+    // 3. АВТОРИЗАЦИЯ И РАЗДЕЛЕНИЕ ПРАВ (БЕЛЫЙ СПИСОК МАСТЕРОВ)
     // =========================================================================
+    // Если массив ALLOWED_MASTERS пустой [], доступ имеют все вошедшие пользователи.
+    // Чтобы ограничить доступ только конкретным пользователям, укажите их email:
+    // например: window.ALLOWED_MASTERS = ['***REMOVED***', 'master2@example.com'];
+    window.ALLOWED_MASTERS = [];
 
-    // Вход по Email / Паролю
+    window.isUserMaster = function(user) {
+      if (!user) return false;
+      if (!window.ALLOWED_MASTERS || window.ALLOWED_MASTERS.length === 0) return true;
+      return window.ALLOWED_MASTERS.map(e => e.toLowerCase()).includes((user.email || '').toLowerCase());
+    };
+
+    // Вход по Email / Паролю (с защитой от повторного клика)
     window.handleEmailLogin = async function(e) {
       e.preventDefault();
-      const email = document.getElementById('login-email').value.trim();
-      const password = document.getElementById('login-password').value;
+      const emailInput = document.getElementById('login-email');
+      const passInput = document.getElementById('login-password');
+      const submitBtn = document.getElementById('i18n-btn-login-email');
       const errorDiv = document.getElementById('auth-error-msg');
+      
+      const email = emailInput?.value.trim() || '';
+      const password = passInput?.value || '';
       errorDiv.classList.add('hidden');
 
-      if (!isConfigValid) {
-        window.currentUser = { email: email || 'master@demo.com' };
-        updateAuthUI(window.currentUser);
-        toggleModal('login-modal');
-        renderApp();
-        return;
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.style.opacity = '0.6';
       }
 
       try {
+        if (!isConfigValid) {
+          window.currentUser = { email: email || 'master@demo.com' };
+          updateAuthUI(window.currentUser);
+          toggleModal('login-modal');
+          renderApp();
+          return;
+        }
+
         await signInWithEmailAndPassword(auth, email, password);
         toggleModal('login-modal');
       } catch (err) {
         console.error("Email login error:", err);
         errorDiv.innerHTML = getAuthErrorMessage(err.code, err.message);
         errorDiv.classList.remove('hidden');
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.style.opacity = '1';
+        }
       }
     };
 
-    // Вход через Google (с улучшенной диагностикой ошибок доменов)
+    // Вход через Google (с защитой от повторного клика)
     window.handleGoogleLogin = async function() {
       const errorDiv = document.getElementById('auth-error-msg');
+      const googleBtn = document.getElementById('i18n-btn-login-google')?.parentElement;
       errorDiv.classList.add('hidden');
 
-      if (!isConfigValid) {
-        window.currentUser = { email: 'google.master@demo.com' };
-        updateAuthUI(window.currentUser);
-        toggleModal('login-modal');
-        renderApp();
-        return;
+      if (googleBtn) {
+        googleBtn.disabled = true;
+        googleBtn.style.opacity = '0.6';
       }
 
       try {
+        if (!isConfigValid) {
+          window.currentUser = { email: 'google.master@demo.com' };
+          updateAuthUI(window.currentUser);
+          toggleModal('login-modal');
+          renderApp();
+          return;
+        }
+
         const provider = new GoogleAuthProvider();
         await signInWithPopup(auth, provider);
         toggleModal('login-modal');
@@ -1087,6 +1117,11 @@
         console.error("Google login error details:", err.code, err.message, err);
         errorDiv.innerHTML = getAuthErrorMessage(err.code, err.message);
         errorDiv.classList.remove('hidden');
+      } finally {
+        if (googleBtn) {
+          googleBtn.disabled = false;
+          googleBtn.style.opacity = '1';
+        }
       }
     };
 
@@ -1101,41 +1136,65 @@
       }
     };
 
-    // Перевод ошибок авторизации на выбранный язык с диагностикой доменов
+    // Мультиязычный перевод ошибок авторизации (RU / PL / EN)
     function getAuthErrorMessage(code, message) {
       const currentHost = window.location.hostname;
-      
+      const lang = window.currentLang || 'ru';
+
+      const msgs = {
+        ru: {
+          unauthorized_domain: `<div><strong>Ошибка авторизации домена (${code}):</strong></div><div>Домен <code>${currentHost}</code> не добавлен в список разрешенных. Зайдите в <em>Firebase Console -> Authentication -> Settings -> Authorized Domains</em> и нажмите "Add domain" для <code>${currentHost}</code>.</div>`,
+          invalid_cred: 'Неверный Email или пароль.',
+          invalid_email: 'Некорректный формат Email адреса.',
+          popup_closed: 'Окно авторизации Google было закрыто до завершения.',
+          popup_blocked: 'Окно входа заблокировано браузером. Разрешите всплывающие окна.',
+          default: `<div>Ошибка авторизации [${code || 'auth/error'}]: ${message || 'Проверьте настройки.'}</div>`
+        },
+        pl: {
+          unauthorized_domain: `<div><strong>Błąd autoryzacji domeny (${code}):</strong></div><div>Domena <code>${currentHost}</code> nie jest na liście dozwolonych. Przejdź do <em>Firebase Console -> Authentication -> Settings -> Authorized Domains</em> i dodaj <code>${currentHost}</code>.</div>`,
+          invalid_cred: 'Nieprawidłowy Email lub hasło.',
+          invalid_email: 'Niepoprawny format adresu Email.',
+          popup_closed: 'Okno logowania Google zostało zamknięte przed zakończeniem.',
+          popup_blocked: 'Okno logowania zostało zablokowane przez przeglądarkę. Zezwól na wyskakujące okienka.',
+          default: `<div>Błąd autoryzacji [${code || 'auth/error'}]: ${message || 'Sprawdź ustawienia.'}</div>`
+        },
+        en: {
+          unauthorized_domain: `<div><strong>Domain Authorization Error (${code}):</strong></div><div>Domain <code>${currentHost}</code> is not authorized. Go to <em>Firebase Console -> Authentication -> Settings -> Authorized Domains</em> and add <code>${currentHost}</code>.</div>`,
+          invalid_cred: 'Invalid Email or password.',
+          invalid_email: 'Invalid Email address format.',
+          popup_closed: 'Google login popup was closed before completion.',
+          popup_blocked: 'Login popup blocked by browser. Please allow popups.',
+          default: `<div>Auth error [${code || 'auth/error'}]: ${message || 'Check project settings.'}</div>`
+        }
+      };
+
+      const m = msgs[lang] || msgs.ru;
       switch (code) {
-        case 'auth/unauthorized-domain':
-          return `<div><strong>Ошибка авторизации домена (${code}):</strong></div><div>Домен <code>${currentHost}</code> не добавлен в список разрешенных. Зайдите в <em>Firebase Console -> Authentication -> Settings -> Authorized Domains</em> и нажмите "Add domain" для <code>${currentHost}</code>.</div>`;
+        case 'auth/unauthorized-domain': return m.unauthorized_domain;
         case 'auth/invalid-credential':
         case 'auth/wrong-password':
-        case 'auth/user-not-found':
-          return 'Неверный Email или пароль.';
-        case 'auth/invalid-email':
-          return 'Некорректный формат Email адреса.';
-        case 'auth/popup-closed-by-user':
-          return 'Окно авторизации Google было закрыто до завершения.';
-        case 'auth/popup-blocked':
-          return 'Окно входа заблокировано браузером. Разрешите всплывающие окна для этого сайта.';
-        default:
-          return `<div>Ошибка авторизации [${code || 'auth/error'}]: ${message || 'Проверьте настройки проекта.'}</div>`;
+        case 'auth/user-not-found': return m.invalid_cred;
+        case 'auth/invalid-email': return m.invalid_email;
+        case 'auth/popup-closed-by-user': return m.popup_closed;
+        case 'auth/popup-blocked': return m.popup_blocked;
+        default: return m.default;
       }
     }
 
-    // Обновление UI при изменении авторизации
+    // Обновление UI при изменении авторизации (с поддержкой белого списка ALLOWED_MASTERS)
     function updateAuthUI(user) {
       const t = translations[window.currentLang] || translations.ru;
       const authContainer = document.getElementById('auth-status-container');
       const masterFormCard = document.getElementById('master-form-card');
       const readOnlyCard = document.getElementById('read-only-banner-card');
       const actionHeader = document.getElementById('journal-action-header');
+      const fabContainer = document.getElementById('ai-fab-container');
 
       if (!authContainer) return;
 
-      const fabContainer = document.getElementById('ai-fab-container');
+      const userIsMaster = isUserMaster(user);
 
-      if (user) {
+      if (user && userIsMaster) {
         const safeEmail = escapeHTML(user.email);
         authContainer.innerHTML = `
           <div class="flex items-center space-x-2 bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-xl">
@@ -1152,11 +1211,16 @@
         if (actionHeader) actionHeader.classList.remove('hidden');
         if (fabContainer) fabContainer.classList.remove('hidden');
       } else {
+        const loginBtnText = user && !userIsMaster ? `Guest (${user.email})` : t.btn_login_master;
         authContainer.innerHTML = `
-          <button onclick="toggleModal('login-modal')" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl transition flex items-center space-x-1.5 shadow-sm cursor-pointer">
-            <i class="fa-solid fa-key"></i>
-            <span>${escapeHTML(t.btn_login_master)}</span>
-          </button>
+          <div class="flex items-center space-x-2">
+            ${user ? `<span class="text-xs text-amber-400 font-medium hidden sm:inline" title="Учетная запись без прав мастера">Только чтение</span>` : ''}
+            <button onclick="toggleModal('login-modal')" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl transition flex items-center space-x-1.5 shadow-sm cursor-pointer">
+              <i class="fa-solid fa-key"></i>
+              <span>${escapeHTML(loginBtnText)}</span>
+            </button>
+            ${user ? `<button onclick="window.handleLogout()" class="text-xs text-slate-400 hover:text-white p-1" title="${escapeHTML(t.btn_logout)}"><i class="fa-solid fa-right-from-bracket"></i></button>` : ''}
+          </div>
         `;
 
         if (masterFormCard) masterFormCard.classList.add('hidden');
