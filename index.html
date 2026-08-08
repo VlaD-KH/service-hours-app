@@ -818,128 +818,110 @@
         }
       });
 
+      // Безопасное обновление текста элементов
+      const setElemText = (id, val) => { const el = document.getElementById(id); if (el) el.innerText = val; };
+      const setElemHTML = (id, val) => { const el = document.getElementById(id); if (el) el.innerHTML = val; };
+
       // Текстовые элементы
-      document.getElementById('page-title').innerText = t.page_title;
-      document.getElementById('i18n-header-title').innerText = t.header_title;
-      document.getElementById('i18n-header-subtitle').innerText = t.header_subtitle;
-      document.getElementById('i18n-demo-banner-text').innerText = t.demo_banner;
-      document.getElementById('i18n-filter-label').innerText = t.filter_label;
-      document.getElementById('i18n-total-hours-label').innerText = t.total_hours_label;
-      // Не трогаем i18n-hours-unit — его уничтожает renderApp() через innerHTML. Перевод в renderApp().
+      setElemText('page-title', t.page_title);
+      setElemText('i18n-header-title', t.header_title);
+      setElemText('i18n-header-subtitle', t.header_subtitle);
+      setElemText('i18n-demo-banner-text', t.demo_banner);
+      setElemText('i18n-filter-label', t.filter_label);
+      setElemText('i18n-total-hours-label', t.total_hours_label);
 
-      document.getElementById('i18n-form-title').innerText = t.form_title;
-      document.getElementById('i18n-label-date').innerText = t.label_date;
-      document.getElementById('i18n-label-order').innerText = t.label_order;
-      document.getElementById('i18n-label-hours').innerText = t.label_hours;
-      document.getElementById('i18n-label-equipment').innerText = t.label_equipment;
-      document.getElementById('i18n-label-category').innerText = t.label_category;
-      document.getElementById('i18n-cat-h').innerText = t.cat_h;
-      document.getElementById('i18n-cat-p').innerText = t.cat_p;
-      document.getElementById('i18n-cat-e').innerText = t.cat_e;
-      document.getElementById('i18n-cat-s').innerText = t.cat_s;
-      document.getElementById('i18n-cat-dn').innerText = t.cat_dn;
-      document.getElementById('i18n-label-notes').innerText = t.label_notes;
-      document.getElementById('i18n-btn-save').innerText = t.btn_save;
+      setElemText('i18n-form-title', t.form_title);
+      setElemText('i18n-label-date', t.label_date);
+      setElemText('i18n-label-order', t.label_order);
+      setElemText('i18n-label-hours', t.label_hours);
+      setElemText('i18n-label-equipment', t.label_equipment);
+      setElemText('i18n-label-category', t.label_category);
+      setElemText('i18n-cat-h', t.cat_h);
+      setElemText('i18n-cat-p', t.cat_p);
+      setElemText('i18n-cat-e', t.cat_e);
+      setElemText('i18n-cat-s', t.cat_s);
+      setElemText('i18n-cat-dn', t.cat_dn);
+      setElemText('i18n-label-notes', t.label_notes);
+      setElemText('i18n-btn-save', t.btn_save);
 
-      document.getElementById('i18n-read-only-title').innerText = t.read_only_title;
-      document.getElementById('i18n-read-only-desc').innerText = t.read_only_desc;
-      document.getElementById('i18n-read-only-rights').innerText = t.read_only_rights;
-      document.getElementById('i18n-read-only-rights-1').innerText = t.read_only_rights_1;
-      document.getElementById('i18n-read-only-rights-2').innerText = t.read_only_rights_2;
-      document.getElementById('i18n-btn-login-master').innerText = t.btn_login_master;
+      setElemText('i18n-read-only-title', t.read_only_title);
+      setElemText('i18n-read-only-desc', t.read_only_desc);
+      setElemText('i18n-read-only-rights', t.read_only_rights);
+      setElemText('i18n-read-only-rights-1', t.read_only_rights_1);
+      setElemText('i18n-read-only-rights-2', t.read_only_rights_2);
+      setElemText('i18n-btn-login-master', t.btn_login_master);
 
-      document.getElementById('i18n-pivot-title').innerText = t.pivot_title;
-      document.getElementById('i18n-pivot-badge').innerText = t.pivot_badge;
-      document.getElementById('i18n-th-order').innerText = t.th_order;
-      document.getElementById('i18n-th-h').innerText = t.th_h;
-      document.getElementById('i18n-th-p').innerText = t.th_p;
-      document.getElementById('i18n-th-e').innerText = t.th_e;
-      document.getElementById('i18n-th-s').innerText = t.th_s;
-      document.getElementById('i18n-th-dn').innerText = t.th_dn;
-      document.getElementById('i18n-th-total').innerText = t.th_total;
+      setElemText('i18n-pivot-title', t.pivot_title);
+      setElemText('i18n-pivot-badge', t.pivot_badge);
+      setElemText('i18n-th-order', t.th_order);
+      setElemText('i18n-th-h', t.th_h);
+      setElemText('i18n-th-p', t.th_p);
+      setElemText('i18n-th-e', t.th_e);
+      setElemText('i18n-th-s', t.th_s);
+      setElemText('i18n-th-dn', t.th_dn);
+      setElemText('i18n-th-total', t.th_total);
 
-      document.getElementById('i18n-journal-title').innerText = t.journal_title;
-      document.getElementById('i18n-th-date').innerText = t.th_date;
-      document.getElementById('i18n-th-order-no').innerText = t.th_order_no;
-      document.getElementById('i18n-th-cat').innerText = t.th_cat;
-      document.getElementById('i18n-th-hours').innerText = t.th_hours;
-      document.getElementById('i18n-th-notes').innerText = t.th_notes;
-      document.getElementById('journal-action-header').innerText = t.th_action;
+      setElemText('i18n-journal-title', t.journal_title);
+      setElemText('i18n-th-date', t.th_date);
+      setElemText('i18n-th-order-no', t.th_order_no);
+      setElemText('i18n-th-cat', t.th_cat);
+      setElemText('i18n-th-hours', t.th_hours);
+      setElemText('i18n-th-notes', t.th_notes);
+      setElemText('journal-action-header', t.th_action);
 
       // Подписи в модалке логина и плейсхолдер заметок
-      const elEmail = document.getElementById('i18n-label-email');
-      if (elEmail) elEmail.innerText = t.label_email;
-      const elPass = document.getElementById('i18n-label-password');
-      if (elPass) elPass.innerText = t.label_password;
+      setElemText('i18n-label-email', t.label_email);
+      setElemText('i18n-label-password', t.label_password);
       const notesInput = document.getElementById('input-notes');
       if (notesInput) notesInput.placeholder = t.placeholder_notes;
 
-      document.getElementById('i18n-modal-login-title').innerText = t.modal_login_title;
-      document.getElementById('i18n-modal-login-subtitle').innerText = t.modal_login_subtitle;
-      document.getElementById('i18n-btn-login-email').innerText = t.btn_login_email;
-      document.getElementById('i18n-btn-login-google').innerText = t.btn_login_google;
-      document.getElementById('i18n-or-text').innerText = t.or_text;
+      setElemText('i18n-modal-login-title', t.modal_login_title);
+      setElemText('i18n-modal-login-subtitle', t.modal_login_subtitle);
+      setElemText('i18n-btn-login-email', t.btn_login_email);
+      setElemText('i18n-btn-login-google', t.btn_login_google);
+      setElemText('i18n-or-text', t.or_text);
 
-      document.getElementById('i18n-delete-modal-title').innerText = t.delete_modal_title;
-      document.getElementById('i18n-delete-modal-text').innerText = t.delete_modal_text;
-      document.getElementById('i18n-btn-cancel').innerText = t.btn_cancel;
-      document.getElementById('confirm-delete-btn').innerText = t.btn_delete;
+      setElemText('i18n-delete-modal-title', t.delete_modal_title);
+      setElemText('i18n-delete-modal-text', t.delete_modal_text);
+      setElemText('i18n-btn-cancel', t.btn_cancel);
+      setElemText('confirm-delete-btn', t.btn_delete);
 
-      document.getElementById('i18n-info-title').innerText = t.info_title;
-      document.getElementById('i18n-info-body').innerHTML = t.info_html;
-      document.getElementById('i18n-btn-understand').innerText = t.btn_understand;
+      setElemText('i18n-info-title', t.info_title);
+      setElemHTML('i18n-info-body', t.info_html);
+      setElemText('i18n-btn-understand', t.btn_understand);
 
       // Элементы ИИ-Помощника
-      const fabLabel = document.getElementById('i18n-fab-label');
-      if (fabLabel) fabLabel.innerText = t.fab_label;
-      const aiDownloadTitle = document.getElementById('i18n-ai-download-title');
-      if (aiDownloadTitle) aiDownloadTitle.innerText = t.ai_download_title;
-      const aiDownloadSubtitle = document.getElementById('i18n-ai-download-subtitle');
-      if (aiDownloadSubtitle) aiDownloadSubtitle.innerText = t.ai_download_subtitle;
-      const aiDownloadDesc = document.getElementById('i18n-ai-download-desc');
-      if (aiDownloadDesc) aiDownloadDesc.innerText = t.ai_download_desc;
-      const aiBtnStart = document.getElementById('i18n-ai-btn-start');
-      if (aiBtnStart) aiBtnStart.innerText = t.ai_btn_start;
-      const aiBtnCancel = document.getElementById('i18n-ai-btn-cancel');
-      if (aiBtnCancel) aiBtnCancel.innerText = t.btn_cancel;
-      const aiProgressStatus = document.getElementById('ai-progress-status');
-      if (aiProgressStatus) aiProgressStatus.innerText = t.ai_progress_status;
+      setElemText('i18n-fab-label', t.fab_label);
+      setElemText('i18n-ai-download-title', t.ai_download_title);
+      setElemText('i18n-ai-download-subtitle', t.ai_download_subtitle);
+      setElemText('i18n-ai-download-desc', t.ai_download_desc);
+      setElemText('i18n-ai-btn-start', t.ai_btn_start);
+      setElemText('i18n-ai-btn-cancel', t.btn_cancel);
+      setElemText('ai-progress-status', t.ai_progress_status);
 
-      const aiConfirmTitle = document.getElementById('i18n-ai-confirm-title');
-      if (aiConfirmTitle) aiConfirmTitle.innerText = t.ai_confirm_title;
-      const aiDictatedLabel = document.getElementById('i18n-ai-dictated-label');
-      if (aiDictatedLabel) aiDictatedLabel.innerText = t.ai_dictated_label;
-      const aiLblOrder = document.getElementById('i18n-ai-lbl-order');
-      if (aiLblOrder) aiLblOrder.innerText = t.ai_lbl_order;
-      const aiLblHours = document.getElementById('i18n-ai-lbl-hours');
-      if (aiLblHours) aiLblHours.innerText = t.ai_lbl_hours;
-      const aiLblEquipment = document.getElementById('i18n-ai-lbl-equipment');
-      if (aiLblEquipment) aiLblEquipment.innerText = t.ai_lbl_equipment;
-      const aiLblCategory = document.getElementById('i18n-ai-lbl-category');
-      if (aiLblCategory) aiLblCategory.innerText = t.ai_lbl_category;
-      const aiCatH = document.getElementById('i18n-ai-cat-h');
-      if (aiCatH) aiCatH.innerText = t.cat_h;
-      const aiCatP = document.getElementById('i18n-ai-cat-p');
-      if (aiCatP) aiCatP.innerText = t.cat_p;
-      const aiCatE = document.getElementById('i18n-ai-cat-e');
-      if (aiCatE) aiCatE.innerText = t.cat_e;
-      const aiCatS = document.getElementById('i18n-ai-cat-s');
-      if (aiCatS) aiCatS.innerText = t.cat_s;
-      const aiCatDN = document.getElementById('i18n-ai-cat-dn');
-      if (aiCatDN) aiCatDN.innerText = t.cat_dn;
-      const aiLblNotes = document.getElementById('i18n-ai-lbl-notes');
-      if (aiLblNotes) aiLblNotes.innerText = t.ai_lbl_notes;
-      const aiBtnConfirm = document.getElementById('i18n-ai-btn-confirm');
-      if (aiBtnConfirm) aiBtnConfirm.innerHTML = `<i class="fa-solid fa-check"></i><span>${t.ai_btn_confirm}</span>`;
-      const aiBtnDiscard = document.getElementById('i18n-ai-btn-discard');
-      if (aiBtnDiscard) aiBtnDiscard.innerText = t.ai_btn_discard;
+      setElemText('i18n-ai-confirm-title', t.ai_confirm_title);
+      setElemText('i18n-ai-dictated-label', t.ai_dictated_label);
+      setElemText('i18n-ai-lbl-order', t.ai_lbl_order);
+      setElemText('i18n-ai-lbl-hours', t.ai_lbl_hours);
+      setElemText('i18n-ai-lbl-equipment', t.ai_lbl_equipment);
+      setElemText('i18n-ai-lbl-category', t.ai_lbl_category);
+      setElemText('i18n-ai-cat-h', t.cat_h);
+      setElemText('i18n-ai-cat-p', t.cat_p);
+      setElemText('i18n-ai-cat-e', t.cat_e);
+      setElemText('i18n-ai-cat-s', t.cat_s);
+      setElemText('i18n-ai-cat-dn', t.cat_dn);
+      setElemText('i18n-ai-lbl-notes', t.ai_lbl_notes);
+      setElemHTML('i18n-ai-btn-confirm', `<i class="fa-solid fa-check"></i><span>${t.ai_btn_confirm}</span>`);
+      setElemText('i18n-ai-btn-discard', t.ai_btn_discard);
 
       const monthSelect = document.getElementById('filter-month');
-      const selectedValue = monthSelect.value || (new Date().getMonth() + 1).toString().padStart(2, '0');
-      monthSelect.innerHTML = t.months.map((m, idx) => {
-        const val = (idx + 1).toString().padStart(2, '0');
-        return `<option value="${val}" ${val === selectedValue ? 'selected' : ''}>${m}</option>`;
-      }).join('');
+      if (monthSelect) {
+        const selectedValue = monthSelect.value || (new Date().getMonth() + 1).toString().padStart(2, '0');
+        monthSelect.innerHTML = t.months.map((m, idx) => {
+          const val = (idx + 1).toString().padStart(2, '0');
+          return `<option value="${val}" ${val === selectedValue ? 'selected' : ''}>${m}</option>`;
+        }).join('');
+      }
 
       updateAuthUI(window.currentUser);
     }
@@ -1077,7 +1059,7 @@
       }
 
       try {
-        if (!isConfigValid) {
+        if (!isConfigValid || !auth) {
           window.currentUser = { email: 'vladhrapko@gmail.com' };
           updateAuthUI(window.currentUser);
           toggleModal('login-modal');
