@@ -22,25 +22,25 @@
     ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
   </style>
 </head>
-<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col antialiased">
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col antialiased overflow-x-hidden w-full max-w-full">
 
   <!-- ВЕРХНЯЯ ПАНЕЛЬ / ШАПКА -->
-  <header class="bg-slate-900 text-white shadow-lg sticky top-0 z-30">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+  <header class="bg-slate-900 text-white shadow-lg sticky top-0 z-30 w-full overflow-hidden">
+    <div class="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8 h-16 flex items-center justify-between w-full">
       
       <!-- Логотип и заголовок -->
-      <div class="flex items-center space-x-3">
-        <div class="p-2 bg-blue-600 rounded-xl shadow-md">
-          <i class="fa-solid fa-wrench text-xl text-white"></i>
+      <div class="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-shrink">
+        <div class="p-1.5 sm:p-2 bg-blue-600 rounded-xl shadow-md flex-shrink-0">
+          <i class="fa-solid fa-wrench text-base sm:text-xl text-white"></i>
         </div>
-        <div>
-          <h1 id="i18n-header-title" class="font-bold text-lg leading-tight">Сервисный Дашборд</h1>
+        <div class="min-w-0">
+          <h1 id="i18n-header-title" class="font-bold text-xs min-[360px]:text-sm sm:text-lg leading-tight truncate max-w-[90px] min-[360px]:max-w-[130px] min-[420px]:max-w-none">Сервисный Дашборд</h1>
           <p id="i18n-header-subtitle" class="text-xs text-slate-400 hidden sm:block">Учет рабочего времени & Oblako Sync</p>
         </div>
       </div>
 
       <!-- Правый блок: Индикатор облака, Языки, Кнопка Входа/Выхода и Справка -->
-      <div class="flex items-center space-x-2 sm:space-x-3">
+      <div class="flex items-center space-x-1 sm:space-x-3 flex-shrink-0">
         
         <!-- Статус подключения к Firestore -->
         <div id="cloud-badge" class="hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-medium bg-slate-800 text-amber-400 border border-slate-700 transition-all">
@@ -52,20 +52,20 @@
         </div>
 
         <!-- Переключатель языка (PL / RU / EN) -->
-        <div class="flex items-center space-x-0.5 bg-slate-800 p-1 rounded-xl border border-slate-700 text-xs">
-          <button onclick="setLanguage('pl')" id="lang-btn-pl" class="px-2 py-1 rounded-lg font-bold transition hover:text-white">PL</button>
-          <button onclick="setLanguage('ru')" id="lang-btn-ru" class="px-2 py-1 rounded-lg font-bold transition hover:text-white">RU</button>
-          <button onclick="setLanguage('en')" id="lang-btn-en" class="px-2 py-1 rounded-lg font-bold transition hover:text-white">EN</button>
+        <div class="flex items-center space-x-0.5 bg-slate-800 p-0.5 sm:p-1 rounded-xl border border-slate-700 text-[11px] sm:text-xs">
+          <button onclick="setLanguage('pl')" id="lang-btn-pl" class="px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-lg font-bold transition hover:text-white">PL</button>
+          <button onclick="setLanguage('ru')" id="lang-btn-ru" class="px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-lg font-bold transition hover:text-white">RU</button>
+          <button onclick="setLanguage('en')" id="lang-btn-en" class="px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-lg font-bold transition hover:text-white">EN</button>
         </div>
 
         <!-- Статус авторизации пользователя -->
-        <div id="auth-status-container" class="flex items-center space-x-2">
+        <div id="auth-status-container" class="flex items-center space-x-1 sm:space-x-2">
           <!-- Динамически заполняется через JS -->
         </div>
 
         <!-- Кнопка вызова справки -->
-        <button onclick="toggleModal('info-modal')" class="p-2 text-slate-400 hover:text-white transition rounded-lg hover:bg-slate-800" title="Справка">
-          <i class="fa-solid fa-circle-question text-lg"></i>
+        <button onclick="toggleModal('info-modal')" class="p-1.5 sm:p-2 text-slate-400 hover:text-white transition rounded-lg hover:bg-slate-800" title="Справка">
+          <i class="fa-solid fa-circle-question text-base sm:text-lg"></i>
         </button>
       </div>
     </div>
@@ -537,6 +537,7 @@
         read_only_rights_1: "• Добавление и удаление записей заблокировано.",
         read_only_rights_2: "• Авторизуйтесь как мастер для управления сгонами.",
         btn_login_master: "Войти как Мастер",
+        btn_login_short: "Войти",
         pivot_title: "Сводный подсчет по заказам (Аналитика)",
         pivot_badge: "Авторасчет",
         th_order: "Заказ / Объект",
@@ -627,6 +628,7 @@
         read_only_rights_1: "• Dodawanie i usuwanie wpisów jest zablokowane.",
         read_only_rights_2: "• Zaloguj się jako mistrz, aby zarządzać zmianami.",
         btn_login_master: "Zaloguj jako Mistrz",
+        btn_login_short: "Zaloguj",
         pivot_title: "Podsumowanie według zleceń (Analityka)",
         pivot_badge: "Autoprzeliczenie",
         th_order: "Zlecenie / Obiekt",
@@ -717,6 +719,7 @@
         read_only_rights_1: "• Adding and deleting entries is restricted.",
         read_only_rights_2: "• Sign in as master to manage shifts.",
         btn_login_master: "Sign in as Master",
+        btn_login_short: "Login",
         pivot_title: "Order Breakdown Summary (Analytics)",
         pivot_badge: "Auto-calculated",
         th_order: "Order / Equipment",
@@ -1212,12 +1215,14 @@
         if (fabContainer) fabContainer.classList.remove('hidden');
       } else {
         const loginBtnText = user && !userIsMaster ? `Guest (${user.email})` : t.btn_login_master;
+        const shortLoginText = user && !userIsMaster ? `Guest` : (t.btn_login_short || t.btn_login_master);
         authContainer.innerHTML = `
-          <div class="flex items-center space-x-2">
+          <div class="flex items-center space-x-1 sm:space-x-2">
             ${user ? `<span class="text-xs text-amber-400 font-medium hidden sm:inline" title="Учетная запись без прав мастера">Только чтение</span>` : ''}
-            <button onclick="toggleModal('login-modal')" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl transition flex items-center space-x-1.5 shadow-sm cursor-pointer">
-              <i class="fa-solid fa-key"></i>
-              <span>${escapeHTML(loginBtnText)}</span>
+            <button onclick="toggleModal('login-modal')" class="px-2 sm:px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl transition flex items-center space-x-1 shadow-sm cursor-pointer whitespace-nowrap">
+              <i class="fa-solid fa-key text-xs"></i>
+              <span class="hidden min-[420px]:inline">${escapeHTML(loginBtnText)}</span>
+              <span class="inline min-[420px]:hidden">${escapeHTML(shortLoginText)}</span>
             </button>
             ${user ? `<button onclick="window.handleLogout()" class="text-xs text-slate-400 hover:text-white p-1" title="${escapeHTML(t.btn_logout)}"><i class="fa-solid fa-right-from-bracket"></i></button>` : ''}
           </div>
