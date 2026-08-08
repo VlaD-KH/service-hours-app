@@ -51,8 +51,18 @@
         </div>
       </div>
 
-      <!-- Правый блок: Индикатор облака, Языки, Кнопка Входа/Выхода и Справка -->
+      <!-- Правый блок: Индикатор смены, Облако, Языки, Кнопка Входа/Выхода и Справка -->
       <div class="flex items-center space-x-1 sm:space-x-3 flex-shrink-0">
+
+        <!-- Индикатор активной смены (таймер) — скрыт по умолчанию -->
+        <div id="shift-timer-badge" class="hidden items-center space-x-1.5 px-2 py-1 rounded-full text-xs font-bold bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 animate-pulse cursor-pointer" title="Активная смена" onclick="window.scrollToShiftInfo && window.scrollToShiftInfo()">
+          <span class="relative flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          <i class="fa-solid fa-play text-[9px]"></i>
+          <span id="shift-timer-value">00:00:00</span>
+        </div>
         
         <!-- Статус подключения к Firestore -->
         <div id="cloud-badge" class="hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-medium bg-slate-800 text-amber-400 border border-slate-700 transition-all">
@@ -281,6 +291,9 @@
             <table class="w-full text-xs text-left">
               <thead class="bg-slate-50 text-slate-600 uppercase sticky top-0 z-10 border-b border-slate-200 select-none">
                 <tr>
+                  <th class="p-3 whitespace-nowrap text-center">
+                    <span id="i18n-th-shift-time">Время</span>
+                  </th>
                   <th onclick="window.toggleJournalSort('date')" class="p-3 cursor-pointer hover:bg-slate-100 transition whitespace-nowrap">
                     <span id="i18n-th-date">Дата</span>
                     <i id="sort-journal-date" class="fa-solid fa-sort text-[10px] ml-1 opacity-40"></i>
@@ -407,17 +420,36 @@
     </div>
   </div>
 
-  <!-- ПЛАВАЮЩАЯ КНОПКА ГОЛОСОВОГО ИИ-ПОМОЩНИКА (FAB) -->
+  <!-- FAB МАСТЕРА: МЕНЮ ИЗ 3 ТОЧЕК (Голос + Старт/Стоп) -->
   <div id="ai-fab-container" class="fixed bottom-6 right-6 z-40 hidden">
-    <button onclick="handleAiFabClick()" id="ai-fab-btn" class="relative group bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white p-4 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-105 active:scale-95 flex items-center space-x-2 cursor-pointer">
-      <span id="ai-fab-ping" class="absolute -top-1 -right-1 flex h-4 w-4 hidden">
-        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-        <span class="relative inline-flex rounded-full h-4 w-4 bg-emerald-500"></span>
-      </span>
-      <i id="ai-fab-icon" class="fa-solid fa-microphone text-xl"></i>
-      <span id="i18n-fab-label" class="hidden group-hover:inline text-xs font-bold pr-1">Надиктовать смену</span>
+    <!-- Выдвигающееся подменю (скрыто по умолчанию) -->
+    <div id="fab-submenu" class="absolute bottom-16 right-0 flex flex-col items-end space-y-2 opacity-0 pointer-events-none transition-all duration-300 transform translate-y-4">
+      <!-- Кнопка 1: Голосовой ввод -->
+      <div class="flex items-center space-x-2">
+        <span id="i18n-fab-label" class="bg-slate-900/80 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-lg whitespace-nowrap backdrop-blur-sm">Надиктовать смену</span>
+        <button onclick="handleAiFabClick()" id="ai-fab-btn" class="relative bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white w-12 h-12 rounded-full shadow-xl transition-all duration-300 transform hover:scale-110 active:scale-95 flex items-center justify-center cursor-pointer">
+          <span id="ai-fab-ping" class="absolute -top-1 -right-1 flex h-4 w-4 hidden">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-4 w-4 bg-emerald-500"></span>
+          </span>
+          <i id="ai-fab-icon" class="fa-solid fa-microphone text-lg"></i>
+        </button>
+      </div>
+      <!-- Кнопка 2: Старт / Стоп смены -->
+      <div class="flex items-center space-x-2">
+        <span id="fab-shift-label" class="bg-slate-900/80 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-lg whitespace-nowrap backdrop-blur-sm">Начать смену</span>
+        <button onclick="window.handleShiftToggle()" id="fab-shift-btn" class="bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white w-12 h-12 rounded-full shadow-xl transition-all duration-300 transform hover:scale-110 active:scale-95 flex items-center justify-center cursor-pointer">
+          <i id="fab-shift-icon" class="fa-solid fa-play text-lg ml-0.5"></i>
+        </button>
+      </div>
+    </div>
+    <!-- Основная FAB-кнопка: 3 точки -->
+    <button onclick="window.toggleFabMenu()" id="fab-main-btn" class="bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-600 hover:to-slate-700 text-white w-14 h-14 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-105 active:scale-95 flex items-center justify-center cursor-pointer border border-slate-600/50">
+      <i id="fab-main-icon" class="fa-solid fa-ellipsis-vertical text-xl"></i>
     </button>
   </div>
+  <!-- Оверлей для закрытия FAB-меню при клике вне -->
+  <div id="fab-overlay" class="fixed inset-0 z-30 hidden" onclick="window.closeFabMenu()"></div>
 
   <!-- МОДАЛЬНОЕ ОКНО: ЗАПРОС НА СОГЛАСИЕ И ЗАГРУЗКУ ЛОКАЛЬНОЙ МОДЕЛИ -->
   <div id="ai-download-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
@@ -534,7 +566,12 @@
       addDoc, 
       deleteDoc, 
       onSnapshot,
-      writeBatch
+      writeBatch,
+      updateDoc,
+      setDoc,
+      getDoc,
+      query,
+      where
     } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     // =========================================================================
@@ -626,6 +663,13 @@
         placeholder_notes: "Детали демонтажа, фильтры...",
         ai_progress_status: "Загрузка весов модели...",
         fab_label: "Надиктовать смену",
+        shift_start: "Начать смену",
+        shift_stop: "Завершить смену",
+        shift_active_warning: "Смена уже начата!",
+        shift_started_toast: "✅ Смена начата",
+        shift_stopped_toast: "🛑 Смена завершена",
+        shift_gps_error: "⚠️ GPS недоступен. Координаты не записаны.",
+        th_shift_time: "Время",
         ai_download_title: "Локальный ИИ-Помощник",
         ai_download_subtitle: "Автономная голосовая обработка смен",
         ai_download_desc: "Для работы голосовой диктовки без сервера требуется однократная загрузка локальной нейросети в кэш вашего браузера (~1.2 ГБ). После загрузки все данные обрабатываются на 100% конфиденциально на вашем устройстве.",
@@ -720,6 +764,13 @@
         placeholder_notes: "Szczegóły demontażu, filtry...",
         ai_progress_status: "Pobieranie wag modelu...",
         fab_label: "Dyktuj zmianę",
+        shift_start: "Rozpocznij zmianę",
+        shift_stop: "Zakończ zmianę",
+        shift_active_warning: "Zmiana już rozpoczęta!",
+        shift_started_toast: "✅ Zmiana rozpoczęta",
+        shift_stopped_toast: "🛑 Zmiana zakończona",
+        shift_gps_error: "⚠️ GPS niedostępny. Współrzędne nie zapisane.",
+        th_shift_time: "Czas",
         ai_download_title: "Lokalny Asystent AI",
         ai_download_subtitle: "Autonomiczne przetwarzanie głosu",
         ai_download_desc: "Dyktowanie głosowe bez serwera wymaga jednorazowego pobrania lokalnej sieci neuronowej do pamięci podręcznej przeglądarki (~1.2 GB). Po pobraniu wszystkie dane są przetwarzane w 100% poufnie na Twoim urządzeniu.",
@@ -814,6 +865,13 @@
         placeholder_notes: "Disassembly details, filters...",
         ai_progress_status: "Downloading model weights...",
         fab_label: "Dictate Shift",
+        shift_start: "Start Shift",
+        shift_stop: "End Shift",
+        shift_active_warning: "Shift already active!",
+        shift_started_toast: "✅ Shift started",
+        shift_stopped_toast: "🛑 Shift ended",
+        shift_gps_error: "⚠️ GPS unavailable. Coordinates not recorded.",
+        th_shift_time: "Time",
         ai_download_title: "Local AI Assistant",
         ai_download_subtitle: "Offline Voice Processing",
         ai_download_desc: "Serverless voice dictation requires a one-time download of a local neural network into browser cache (~1.2 GB). Once downloaded, all processing is 100% private on your device.",
@@ -842,8 +900,14 @@
     // Глобальное состояние приложения
     window.currentLang = localStorage.getItem('service_hours_lang') || 'ru';
     window.allEntries = [];
+    window.allShifts = [];
     window.pendingDeleteId = null;
     window.currentUser = null;
+    window.isShiftActive = false;
+    window.currentShiftDocId = null;
+    window.shiftStartTimestamp = null;
+    window._shiftTimerInterval = null;
+    window._fabMenuOpen = false;
 
     const isConfigValid = firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY";
     let app, auth, db;
@@ -951,6 +1015,8 @@
 
       // Элементы ИИ-Помощника
       setElemText('i18n-fab-label', t.fab_label);
+      setElemText('fab-shift-label', window.isShiftActive ? t.shift_stop : t.shift_start);
+      setElemText('i18n-th-shift-time', t.th_shift_time);
       setElemText('i18n-ai-download-title', t.ai_download_title);
       setElemText('i18n-ai-download-subtitle', t.ai_download_subtitle);
       setElemText('i18n-ai-download-desc', t.ai_download_desc);
@@ -1059,6 +1125,34 @@
       }, (error) => {
         console.error("Firestore sync error:", error);
         updateSyncBadge('error', translations[window.currentLang].sync_error);
+      });
+
+      // Подписка на коллекцию work_shifts для отображения времени смен в журнале
+      if (window._unsubShifts) window._unsubShifts();
+      const shiftsCollection = collection(db, 'work_shifts');
+      window._unsubShifts = onSnapshot(shiftsCollection, (snapshot) => {
+        const shifts = [];
+        snapshot.forEach((docSnap) => {
+          shifts.push({ id: docSnap.id, ...docSnap.data() });
+        });
+        window.allShifts = shifts;
+
+        // Восстановление активной смены при перезагрузке страницы
+        const activeShift = shifts.find(s => s.timeStart && !s.timeEnd && s.masterEmail === (window.currentUser?.email || ''));
+        if (activeShift && !window.isShiftActive) {
+          window.isShiftActive = true;
+          window.currentShiftDocId = activeShift.id;
+          // Восстановление времени начала из сохранённых данных
+          const [h, m] = (activeShift.timeStart || '00:00').split(':').map(Number);
+          const restored = new Date();
+          restored.setHours(h, m, 0, 0);
+          window.shiftStartTimestamp = restored.getTime();
+          updateShiftUI(true);
+        }
+
+        renderApp();
+      }, (error) => {
+        console.error("Shifts sync error:", error);
       });
     }
 
@@ -1597,7 +1691,7 @@
       document.getElementById('entries-count-badge').innerText = `${filtered.length} ${t.entries_suffix}`;
 
       if (filtered.length === 0) {
-        const colSpan = window.currentUser ? 7 : 6;
+        const colSpan = window.currentUser ? 8 : 7;
         journalTbody.innerHTML = `<tr><td colSpan="${colSpan}" class="text-center py-6 text-slate-400 font-normal">${t.journal_empty}</td></tr>`;
       } else {
         filtered.forEach(item => {
@@ -1620,6 +1714,35 @@
             }
           }
 
+          // Поиск смены для текущей даты из коллекции work_shifts
+          const dayShift = (window.allShifts || []).find(s => s.date === item.date);
+          let shiftTimeHtml = '<span class="text-slate-300">&mdash;</span>';
+          if (dayShift && dayShift.timeStart) {
+            const timeRange = dayShift.timeEnd 
+              ? `${dayShift.timeStart}\u202f\u2013\u202f${dayShift.timeEnd}` 
+              : `${dayShift.timeStart}\u202f\u2013\u202f...`;
+            
+            // GPS-тултип с координатами и ссылками на Google Maps
+            let gpsTooltip = '';
+            if (dayShift.latStart != null && dayShift.lngStart != null) {
+              gpsTooltip += `\u0421\u0442\u0430\u0440\u0442: ${dayShift.latStart.toFixed(4)}, ${dayShift.lngStart.toFixed(4)}`;
+            }
+            if (dayShift.latEnd != null && dayShift.lngEnd != null) {
+              gpsTooltip += ` | \u0421\u0442\u043e\u043f: ${dayShift.latEnd.toFixed(4)}, ${dayShift.lngEnd.toFixed(4)}`;
+            }
+
+            // Ссылка на Google Maps (стартовая точка)
+            const mapsUrl = (dayShift.latStart != null && dayShift.lngStart != null)
+              ? `https://maps.google.com/?q=${dayShift.latStart},${dayShift.lngStart}`
+              : '';
+
+            if (mapsUrl) {
+              shiftTimeHtml = `<a href="${mapsUrl}" target="_blank" rel="noopener" class="text-emerald-600 hover:text-emerald-800 font-semibold underline decoration-dotted cursor-pointer" title="\ud83d\udccd ${gpsTooltip}">${timeRange}</a>`;
+            } else {
+              shiftTimeHtml = `<span class="text-emerald-600 font-semibold" title="${gpsTooltip}">${timeRange}</span>`;
+            }
+          }
+
           const actionTd = window.currentUser 
             ? `<td class="p-3 text-center">
                  <button onclick="openDeleteModal('${item.id}')" class="text-slate-400 hover:text-red-600 p-1 transition" title="${t.btn_delete}">
@@ -1630,6 +1753,7 @@
 
           journalTbody.innerHTML += `
             <tr class="hover:bg-slate-50/80 transition border-b border-slate-100">
+              <td class="p-3 text-center whitespace-nowrap">${shiftTimeHtml}</td>
               <td class="p-3 text-slate-600 whitespace-nowrap font-medium">${formattedDate}</td>
               <td class="p-3 font-bold text-slate-800 whitespace-nowrap">${escapeHTML(item.orderNo)}</td>
               <td class="p-3 text-slate-700 font-semibold whitespace-nowrap">${escapeHTML(item.equipment)}</td>
@@ -1656,6 +1780,253 @@
     window.speechRecognitionInstance = null;
     window.speechTranscriptAccumulator = '';
 
+    // =========================================================================
+    // 6A. FAB-МЕНЮ (Тоггл подменю из 3 точек)
+    // =========================================================================
+
+    // Открытие / закрытие выпадающего меню FAB
+    window.toggleFabMenu = function() {
+      if (window._fabMenuOpen) {
+        window.closeFabMenu();
+      } else {
+        window.openFabMenu();
+      }
+    };
+
+    window.openFabMenu = function() {
+      const submenu = document.getElementById('fab-submenu');
+      const overlay = document.getElementById('fab-overlay');
+      const mainIcon = document.getElementById('fab-main-icon');
+      if (submenu) {
+        submenu.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+        submenu.classList.add('opacity-100', 'pointer-events-auto', 'translate-y-0');
+      }
+      if (overlay) overlay.classList.remove('hidden');
+      if (mainIcon) mainIcon.className = 'fa-solid fa-xmark text-xl transition-transform duration-300';
+      window._fabMenuOpen = true;
+    };
+
+    window.closeFabMenu = function() {
+      const submenu = document.getElementById('fab-submenu');
+      const overlay = document.getElementById('fab-overlay');
+      const mainIcon = document.getElementById('fab-main-icon');
+      if (submenu) {
+        submenu.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+        submenu.classList.remove('opacity-100', 'pointer-events-auto', 'translate-y-0');
+      }
+      if (overlay) overlay.classList.add('hidden');
+      if (mainIcon) mainIcon.className = 'fa-solid fa-ellipsis-vertical text-xl transition-transform duration-300';
+      window._fabMenuOpen = false;
+    };
+
+    // =========================================================================
+    // 6B. СМЕНА: СТАРТ / СТОП + GPS (коллекция work_shifts)
+    // =========================================================================
+
+    // Тогглер смены (вызывается из FAB-кнопки ▶️/⏹️)
+    window.handleShiftToggle = function() {
+      if (!window.currentUser) {
+        toggleModal('login-modal');
+        return;
+      }
+      if (window.isShiftActive) {
+        handleShiftStop();
+      } else {
+        handleShiftStart();
+      }
+      window.closeFabMenu();
+    };
+
+    // Получение GPS-координат (обёртка в Promise)
+    function getGPSPosition() {
+      return new Promise((resolve) => {
+        if (!navigator.geolocation) {
+          resolve({ lat: null, lng: null });
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(
+          (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+          () => resolve({ lat: null, lng: null }),
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+      });
+    }
+
+    // Отображение тост-уведомления (лёгкий фидбэк пользователю)
+    function showToast(message, type = 'success') {
+      const existing = document.getElementById('shift-toast');
+      if (existing) existing.remove();
+      const bgColor = type === 'success' ? 'bg-emerald-600' : type === 'warning' ? 'bg-amber-500' : 'bg-red-500';
+      const toast = document.createElement('div');
+      toast.id = 'shift-toast';
+      toast.className = `fixed top-20 left-1/2 -translate-x-1/2 ${bgColor} text-white text-sm font-bold px-5 py-2.5 rounded-xl shadow-2xl z-[60] transition-all duration-500 animate-bounce`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(() => { toast.classList.add('opacity-0'); setTimeout(() => toast.remove(), 500); }, 2500);
+    }
+
+    // Обновление UI кнопки смены и таймера в шапке
+    function updateShiftUI(active) {
+      const t = translations[window.currentLang] || translations.ru;
+      const shiftBtn = document.getElementById('fab-shift-btn');
+      const shiftIcon = document.getElementById('fab-shift-icon');
+      const shiftLabel = document.getElementById('fab-shift-label');
+      const timerBadge = document.getElementById('shift-timer-badge');
+
+      if (active) {
+        // Кнопка переключается на СТОП (красная)
+        if (shiftBtn) {
+          shiftBtn.classList.remove('from-emerald-500', 'to-green-600', 'hover:from-emerald-600', 'hover:to-green-700');
+          shiftBtn.classList.add('from-red-500', 'to-rose-600', 'hover:from-red-600', 'hover:to-rose-700', 'animate-pulse');
+        }
+        if (shiftIcon) { shiftIcon.className = 'fa-solid fa-stop text-lg'; }
+        if (shiftLabel) shiftLabel.textContent = t.shift_stop;
+
+        // Таймер в шапке
+        if (timerBadge) timerBadge.classList.remove('hidden');
+        if (timerBadge) timerBadge.classList.add('flex');
+        startShiftTimer();
+      } else {
+        // Кнопка возвращается на СТАРТ (зелёная)
+        if (shiftBtn) {
+          shiftBtn.classList.remove('from-red-500', 'to-rose-600', 'hover:from-red-600', 'hover:to-rose-700', 'animate-pulse');
+          shiftBtn.classList.add('from-emerald-500', 'to-green-600', 'hover:from-emerald-600', 'hover:to-green-700');
+        }
+        if (shiftIcon) { shiftIcon.className = 'fa-solid fa-play text-lg ml-0.5'; }
+        if (shiftLabel) shiftLabel.textContent = t.shift_start;
+
+        // Таймер в шапке скрывается
+        if (timerBadge) timerBadge.classList.add('hidden');
+        if (timerBadge) timerBadge.classList.remove('flex');
+        stopShiftTimer();
+      }
+    }
+
+    // Запуск живого таймера в шапке (setInterval каждую секунду)
+    function startShiftTimer() {
+      stopShiftTimer();
+      const timerEl = document.getElementById('shift-timer-value');
+      window._shiftTimerInterval = setInterval(() => {
+        if (!window.shiftStartTimestamp || !timerEl) return;
+        const elapsed = Date.now() - window.shiftStartTimestamp;
+        const totalSec = Math.floor(elapsed / 1000);
+        const hh = String(Math.floor(totalSec / 3600)).padStart(2, '0');
+        const mm = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
+        const ss = String(totalSec % 60).padStart(2, '0');
+        timerEl.textContent = `${hh}:${mm}:${ss}`;
+      }, 1000);
+    }
+
+    // Остановка таймера
+    function stopShiftTimer() {
+      if (window._shiftTimerInterval) {
+        clearInterval(window._shiftTimerInterval);
+        window._shiftTimerInterval = null;
+      }
+    }
+
+    // НАЧАЛО СМЕНЫ: GPS-снапшот + создание документа в Firestore
+    async function handleShiftStart() {
+      const t = translations[window.currentLang] || translations.ru;
+      const today = new Date().toISOString().split('T')[0];
+
+      // Защита от двойного старта: проверка по дате
+      const existingShift = (window.allShifts || []).find(s => s.date === today && s.masterEmail === window.currentUser.email);
+      if (existingShift) {
+        showToast(t.shift_active_warning, 'warning');
+        return;
+      }
+
+      // GPS-снапшот начала смены
+      const gps = await getGPSPosition();
+      if (gps.lat === null) {
+        showToast(t.shift_gps_error, 'warning');
+      }
+
+      const now = new Date();
+      const timeStart = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+
+      const shiftData = {
+        date: today,
+        timeStart: timeStart,
+        timeEnd: null,
+        latStart: gps.lat,
+        lngStart: gps.lng,
+        latEnd: null,
+        lngEnd: null,
+        masterEmail: window.currentUser.email
+      };
+
+      if (isConfigValid && db) {
+        try {
+          const docRef = await addDoc(collection(db, 'work_shifts'), shiftData);
+          window.currentShiftDocId = docRef.id;
+        } catch (err) {
+          console.error('Ошибка создания смены:', err);
+          showToast('Ошибка сохранения смены', 'error');
+          return;
+        }
+      } else {
+        // Демо-режим: локальное сохранение
+        const demoId = 'shift-demo-' + Date.now();
+        shiftData.id = demoId;
+        window.allShifts.push(shiftData);
+        window.currentShiftDocId = demoId;
+        renderApp();
+      }
+
+      window.isShiftActive = true;
+      window.shiftStartTimestamp = now.getTime();
+      updateShiftUI(true);
+      showToast(t.shift_started_toast, 'success');
+    }
+
+    // ЗАВЕРШЕНИЕ СМЕНЫ: GPS-снапшот + обновление документа в Firestore
+    async function handleShiftStop() {
+      const t = translations[window.currentLang] || translations.ru;
+
+      // GPS-снапшот конца смены
+      const gps = await getGPSPosition();
+      if (gps.lat === null) {
+        showToast(t.shift_gps_error, 'warning');
+      }
+
+      const now = new Date();
+      const timeEnd = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+
+      if (isConfigValid && db && window.currentShiftDocId) {
+        try {
+          const shiftRef = doc(db, 'work_shifts', window.currentShiftDocId);
+          await updateDoc(shiftRef, {
+            timeEnd: timeEnd,
+            latEnd: gps.lat,
+            lngEnd: gps.lng
+          });
+        } catch (err) {
+          console.error('Ошибка обновления смены:', err);
+        }
+      } else if (window.currentShiftDocId) {
+        // Демо-режим: локальное обновление
+        const localShift = window.allShifts.find(s => s.id === window.currentShiftDocId);
+        if (localShift) {
+          localShift.timeEnd = timeEnd;
+          localShift.latEnd = gps.lat;
+          localShift.lngEnd = gps.lng;
+        }
+        renderApp();
+      }
+
+      window.isShiftActive = false;
+      window.currentShiftDocId = null;
+      window.shiftStartTimestamp = null;
+      updateShiftUI(false);
+      showToast(t.shift_stopped_toast, 'success');
+    }
+
+    // =========================================================================
+    // 6C. ГОЛОСОВОЙ ИИ-ПОМОЩНИК И RAG-ПАРСИНГ СМЕН (EQUIPMENT KNOWLEDGE BASE)
+    // =========================================================================
+
     async function loadEquipmentKnowledge() {
       try {
         const res = await fetch('equipment_knowledge.json');
@@ -1672,6 +2043,7 @@
         toggleModal('login-modal');
         return;
       }
+      window.closeFabMenu();
 
       const isModelDownloaded = localStorage.getItem('service_hours_ai_downloaded') === 'true';
       if (!isModelDownloaded) {
