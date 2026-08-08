@@ -1,3 +1,8 @@
 antigravity_debug.log
 .DS_Store
 *.log
+
+# Sensitive config
+config.js
+dist/
+.env

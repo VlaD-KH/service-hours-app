@@ -9,6 +9,8 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- FontAwesome Icons CDN -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Config script -->
+  <script src="./config.js"></script>
   <!-- Inter Font -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
@@ -490,14 +492,16 @@
     // =========================================================================
     // 1. КОНФИГУРАЦИЯ FIREBASE
     // =========================================================================
-    const firebaseConfig = {
-      apiKey: "***REMOVED***",
-      authDomain: "vhs-zps.firebaseapp.com",
-      projectId: "vhs-zps",
-      storageBucket: "vhs-zps.firebasestorage.app",
-      messagingSenderId: "***REMOVED***",
-      appId: "1:***REMOVED***:web:36d289606cdc2018b28d5d",
-      measurementId: "***REMOVED***"
+    // Загружается из внешнего файла config.js, который не отслеживается в Git.
+    // Если файла нет, используем заглушку, чтобы приложение не падало в браузере.
+    const firebaseConfig = window.ENV?.firebaseConfig || {
+      apiKey: "",
+      authDomain: "",
+      projectId: "",
+      storageBucket: "",
+      messagingSenderId: "",
+      appId: "",
+      measurementId: ""
     };
 
     // =========================================================================
@@ -1039,10 +1043,8 @@
     // =========================================================================
     // 3. АВТОРИЗАЦИЯ И РАЗДЕЛЕНИЕ ПРАВ (БЕЛЫЙ СПИСОК МАСТЕРОВ)
     // =========================================================================
-    // Если массив ALLOWED_MASTERS пустой [], доступ имеют все вошедшие пользователи.
-    // Чтобы ограничить доступ только конкретным пользователям, укажите их email:
-    // например: window.ALLOWED_MASTERS = ['***REMOVED***', 'master2@example.com'];
-    window.ALLOWED_MASTERS = [];
+    // Загружается из config.js
+    window.ALLOWED_MASTERS = window.ENV?.ALLOWED_MASTERS || [];
 
     window.isUserMaster = function(user) {
       if (!user) return false;
