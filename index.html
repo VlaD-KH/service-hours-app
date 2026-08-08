@@ -148,7 +148,7 @@
             </div>
 
             <div>
-              <label id="i18n-label-equipment" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Оборудование / Объект</label>
+              <label id="i18n-label-equipment" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Модель</label>
               <input type="text" id="input-equipment" list="equipment-list" placeholder="WM-15P.00/M nr 26" required class="w-full p-2.5 border border-slate-300 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50">
               <datalist id="equipment-list"></datalist>
             </div>
@@ -218,15 +218,34 @@
 
           <div class="overflow-x-auto">
             <table class="w-full text-xs text-left border-collapse">
-              <thead class="bg-slate-100/70 text-slate-600 uppercase font-bold border-b border-slate-200">
+              <thead class="bg-slate-100/70 text-slate-600 uppercase font-bold border-b border-slate-200 select-none">
                 <tr>
-                  <th id="i18n-th-order" class="p-3">Заказ / Объект</th>
-                  <th id="i18n-th-h" class="p-3 text-center border-l border-slate-200 text-blue-600">H (Гидр)</th>
-                  <th id="i18n-th-p" class="p-3 text-center text-sky-600">P (Пневм)</th>
-                  <th id="i18n-th-e" class="p-3 text-center text-amber-600">E (Электр)</th>
-                  <th id="i18n-th-s" class="p-3 text-center text-slate-600">S (Слесар)</th>
-                  <th id="i18n-th-dn" class="p-3 text-center text-purple-600">D+N (Диаг)</th>
-                  <th id="i18n-th-total" class="p-3 text-center border-l border-slate-200 bg-slate-200/60 font-extrabold text-slate-800">Итого</th>
+                  <th onclick="window.togglePivotSort('orderNo')" class="p-3 cursor-pointer hover:bg-slate-200/60 transition whitespace-nowrap">
+                    <span id="i18n-th-order-no">№ Заказа</span>
+                    <i id="sort-pivot-orderNo" class="fa-solid fa-sort text-[10px] ml-1 opacity-40"></i>
+                  </th>
+                  <th onclick="window.togglePivotSort('equipment')" class="p-3 cursor-pointer hover:bg-slate-200/60 transition whitespace-nowrap border-r border-slate-200/60">
+                    <span id="i18n-th-model">Модель</span>
+                    <i id="sort-pivot-equipment" class="fa-solid fa-sort text-[10px] ml-1 opacity-40"></i>
+                  </th>
+                  <th onclick="window.togglePivotSort('H')" class="p-3 text-center text-blue-600 cursor-pointer hover:bg-slate-200/60 transition">
+                    <span>H</span> <i id="sort-pivot-H" class="fa-solid fa-sort text-[10px] opacity-30"></i>
+                  </th>
+                  <th onclick="window.togglePivotSort('P')" class="p-3 text-center text-sky-600 cursor-pointer hover:bg-slate-200/60 transition">
+                    <span>P</span> <i id="sort-pivot-P" class="fa-solid fa-sort text-[10px] opacity-30"></i>
+                  </th>
+                  <th onclick="window.togglePivotSort('E')" class="p-3 text-center text-amber-600 cursor-pointer hover:bg-slate-200/60 transition">
+                    <span>E</span> <i id="sort-pivot-E" class="fa-solid fa-sort text-[10px] opacity-30"></i>
+                  </th>
+                  <th onclick="window.togglePivotSort('S')" class="p-3 text-center text-slate-600 cursor-pointer hover:bg-slate-200/60 transition">
+                    <span>S</span> <i id="sort-pivot-S" class="fa-solid fa-sort text-[10px] opacity-30"></i>
+                  </th>
+                  <th onclick="window.togglePivotSort('D+N')" class="p-3 text-center text-purple-600 cursor-pointer hover:bg-slate-200/60 transition">
+                    <span>D+N</span> <i id="sort-pivot-D+N" class="fa-solid fa-sort text-[10px] opacity-30"></i>
+                  </th>
+                  <th onclick="window.togglePivotSort('total')" class="p-3 text-center border-l border-slate-200 bg-slate-200/60 font-extrabold text-slate-800 cursor-pointer hover:bg-slate-300/60 transition">
+                    <span id="i18n-th-total">Итого</span> <i id="sort-pivot-total" class="fa-solid fa-sort text-[10px] opacity-40"></i>
+                  </th>
                 </tr>
               </thead>
               <tbody id="pivot-tbody" class="divide-y divide-slate-100 font-medium">
@@ -248,12 +267,28 @@
 
           <div class="overflow-x-auto max-h-[420px] overflow-y-auto">
             <table class="w-full text-xs text-left">
-              <thead class="bg-slate-50 text-slate-500 uppercase sticky top-0 z-10 border-b border-slate-200">
+              <thead class="bg-slate-50 text-slate-600 uppercase sticky top-0 z-10 border-b border-slate-200 select-none">
                 <tr>
-                  <th id="i18n-th-date" class="p-3">Дата</th>
-                  <th id="i18n-th-order-no" class="p-3">Заказ</th>
-                  <th id="i18n-th-cat" class="p-3">Кат.</th>
-                  <th id="i18n-th-hours" class="p-3 text-right">Часы</th>
+                  <th onclick="window.toggleJournalSort('date')" class="p-3 cursor-pointer hover:bg-slate-100 transition whitespace-nowrap">
+                    <span id="i18n-th-date">Дата</span>
+                    <i id="sort-journal-date" class="fa-solid fa-sort text-[10px] ml-1 opacity-40"></i>
+                  </th>
+                  <th onclick="window.toggleJournalSort('orderNo')" class="p-3 cursor-pointer hover:bg-slate-100 transition whitespace-nowrap">
+                    <span id="i18n-th-journal-order">Заказ</span>
+                    <i id="sort-journal-orderNo" class="fa-solid fa-sort text-[10px] ml-1 opacity-40"></i>
+                  </th>
+                  <th onclick="window.toggleJournalSort('equipment')" class="p-3 cursor-pointer hover:bg-slate-100 transition whitespace-nowrap">
+                    <span id="i18n-th-journal-model">Модель</span>
+                    <i id="sort-journal-equipment" class="fa-solid fa-sort text-[10px] ml-1 opacity-40"></i>
+                  </th>
+                  <th onclick="window.toggleJournalSort('category')" class="p-3 cursor-pointer hover:bg-slate-100 transition whitespace-nowrap">
+                    <span id="i18n-th-cat">Кат.</span>
+                    <i id="sort-journal-category" class="fa-solid fa-sort text-[10px] ml-1 opacity-40"></i>
+                  </th>
+                  <th onclick="window.toggleJournalSort('hours')" class="p-3 text-right cursor-pointer hover:bg-slate-100 transition whitespace-nowrap">
+                    <span id="i18n-th-hours">Часы</span>
+                    <i id="sort-journal-hours" class="fa-solid fa-sort text-[10px] ml-1 opacity-40"></i>
+                  </th>
                   <th id="i18n-th-notes" class="p-3">Заметки</th>
                   <th id="journal-action-header" class="p-3 text-center hidden">Действие</th>
                 </tr>
@@ -523,7 +558,7 @@
         label_date: "Дата",
         label_order: "№ Заказа",
         label_hours: "Часы",
-        label_equipment: "Оборудование / Объект",
+        label_equipment: "Модель",
         label_category: "Категория работ",
         cat_h: "H — Гидравлика",
         cat_p: "P — Пневматика",
@@ -541,7 +576,8 @@
         btn_login_short: "Войти",
         pivot_title: "Сводный подсчет по заказам (Аналитика)",
         pivot_badge: "Авторасчет",
-        th_order: "Заказ / Объект",
+        th_order: "№ Заказа",
+        th_model: "Модель",
         th_h: "H (Гидр)",
         th_p: "P (Пневм)",
         th_e: "E (Электр)",
@@ -552,7 +588,9 @@
         journal_empty: "Журнал пуст",
         pivot_empty: "Нет записей за выбранный месяц",
         th_date: "Дата",
-        th_order_no: "Заказ",
+        th_order_no: "№ Заказа",
+        th_journal_order: "№ Заказа",
+        th_journal_model: "Модель",
         th_cat: "Кат.",
         th_hours: "Часы",
         th_notes: "Заметки",
@@ -584,7 +622,7 @@
         ai_dictated_label: "Надиктованный текст:",
         ai_lbl_order: "№ Заказа",
         ai_lbl_hours: "Часы",
-        ai_lbl_equipment: "Оборудование / Объект",
+        ai_lbl_equipment: "Модель",
         ai_lbl_category: "Категория",
         ai_lbl_notes: "Заметки",
         ai_btn_confirm: "Подтвердить и сохранить",
@@ -596,7 +634,7 @@
             <br>• <em>Начальник / Руководитель:</em> Видит весь дашборд, общие часы, сводные таблицы по заказам и журнал (Без авторизации).
             <br>• <em>Мастер:</em> Выполняет вход для добавления новых рабочих смен и редактирования/удаления записей.
           </p>
-          <p>📊 <strong>Сводная аналитика:</strong> Таблица автоматически группирует отработанные часы по объектам/заказам в разрезе категорий (H — Гидравлика, P — Пневматика, E — Электрика, S — Слесарка, D+N — Диагностика/Ремонт).</p>
+          <p>📊 <strong>Сводная аналитика:</strong> Таблица автоматически группирует отработанные часы по заказам и моделям поездов в разрезе категорий (H — Гидравлика, P — Пневматика, E — Электрика, S — Слесарка, D+N — Диагностика/Ремонт).</p>
         `
       },
       pl: {
@@ -614,7 +652,7 @@
         label_date: "Data",
         label_order: "Nr Zlecenia",
         label_hours: "Godziny",
-        label_equipment: "Maszyna / Obiekt",
+        label_equipment: "Model",
         label_category: "Kategoria prac",
         cat_h: "H — Hydraulika",
         cat_p: "P — Pneumatyka",
@@ -632,7 +670,8 @@
         btn_login_short: "Zaloguj",
         pivot_title: "Podsumowanie według zleceń (Analityka)",
         pivot_badge: "Autoprzeliczenie",
-        th_order: "Zlecenie / Obiekt",
+        th_order: "Nr Zlecenia",
+        th_model: "Model",
         th_h: "H (Hydr)",
         th_p: "P (Pneum)",
         th_e: "E (Elektr)",
@@ -644,6 +683,8 @@
         pivot_empty: "Brak wpisów dla wybranego miesiąca",
         th_date: "Data",
         th_order_no: "Zlecenie",
+        th_journal_order: "Nr Zlecenia",
+        th_journal_model: "Model",
         th_cat: "Kat.",
         th_hours: "Godz.",
         th_notes: "Uwagi",
@@ -675,7 +716,7 @@
         ai_dictated_label: "Podyktowany tekst:",
         ai_lbl_order: "Nr Zlecenia",
         ai_lbl_hours: "Godziny",
-        ai_lbl_equipment: "Maszyna / Obiekt",
+        ai_lbl_equipment: "Model",
         ai_lbl_category: "Kategoria",
         ai_lbl_notes: "Uwagi",
         ai_btn_confirm: "Zatwierdź i zapisz",
@@ -687,7 +728,7 @@
             <br>• <em>Kierownik:</em> Widzi pełny pulpit, godziny, tabele podsumowujące i dziennik (Bez logowania).
             <br>• <em>Mistrz:</em> Loguje się, aby dodawać nowe zmiany oraz edytować/usuwać wpisy.
           </p>
-          <p>📊 <strong>Analityka:</strong> Tabela automatycznie grupuje przepracowane godziny według zleceń w podziale na kategorie (H, P, E, S, D+N).</p>
+          <p>📊 <strong>Analityka:</strong> Tabela automatycznie grupuje przepracowane godziny według zleceń i modeli w podziale na kategorie (H, P, E, S, D+N).</p>
         `
       },
       en: {
@@ -705,7 +746,7 @@
         label_date: "Date",
         label_order: "Order No",
         label_hours: "Hours",
-        label_equipment: "Equipment / Site",
+        label_equipment: "Model",
         label_category: "Work Category",
         cat_h: "H — Hydraulics",
         cat_p: "P — Pneumatics",
@@ -723,7 +764,8 @@
         btn_login_short: "Login",
         pivot_title: "Order Breakdown Summary (Analytics)",
         pivot_badge: "Auto-calculated",
-        th_order: "Order / Equipment",
+        th_order: "Order No",
+        th_model: "Model",
         th_h: "H (Hydr)",
         th_p: "P (Pneum)",
         th_e: "E (Elec)",
@@ -735,6 +777,8 @@
         pivot_empty: "No entries for selected month",
         th_date: "Date",
         th_order_no: "Order",
+        th_journal_order: "Order No",
+        th_journal_model: "Model",
         th_cat: "Cat.",
         th_hours: "Hours",
         th_notes: "Notes",
@@ -766,7 +810,7 @@
         ai_dictated_label: "Dictated Text:",
         ai_lbl_order: "Order No",
         ai_lbl_hours: "Hours",
-        ai_lbl_equipment: "Equipment / Site",
+        ai_lbl_equipment: "Model",
         ai_lbl_category: "Category",
         ai_lbl_notes: "Notes",
         ai_btn_confirm: "Confirm & Save",
@@ -854,6 +898,8 @@
       setElemText('i18n-pivot-title', t.pivot_title);
       setElemText('i18n-pivot-badge', t.pivot_badge);
       setElemText('i18n-th-order', t.th_order);
+      setElemText('i18n-th-order-no', t.th_order);
+      setElemText('i18n-th-model', t.th_model);
       setElemText('i18n-th-h', t.th_h);
       setElemText('i18n-th-p', t.th_p);
       setElemText('i18n-th-e', t.th_e);
@@ -863,7 +909,8 @@
 
       setElemText('i18n-journal-title', t.journal_title);
       setElemText('i18n-th-date', t.th_date);
-      setElemText('i18n-th-order-no', t.th_order_no);
+      setElemText('i18n-th-journal-order', t.th_journal_order);
+      setElemText('i18n-th-journal-model', t.th_journal_model);
       setElemText('i18n-th-cat', t.th_cat);
       setElemText('i18n-th-hours', t.th_hours);
       setElemText('i18n-th-notes', t.th_notes);
@@ -1373,6 +1420,59 @@
       }
     });
 
+    // =========================================================================
+    // 5. СОСТОЯНИЕ СОРТИРОВКИ И РЕНДЕРИНГ ИНТЕРФЕЙСА
+    // =========================================================================
+    window.journalSortKey = 'date';
+    window.journalSortDir = 'desc';
+
+    window.pivotSortKey = 'orderNo';
+    window.pivotSortDir = 'asc';
+
+    window.toggleJournalSort = function(key) {
+      if (window.journalSortKey === key) {
+        window.journalSortDir = window.journalSortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        window.journalSortKey = key;
+        window.journalSortDir = (key === 'date' || key === 'hours') ? 'desc' : 'asc';
+      }
+      renderApp();
+    };
+
+    window.togglePivotSort = function(key) {
+      if (window.pivotSortKey === key) {
+        window.pivotSortDir = window.pivotSortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        window.pivotSortKey = key;
+        window.pivotSortDir = ['H', 'P', 'E', 'S', 'D+N', 'total'].includes(key) ? 'desc' : 'asc';
+      }
+      renderApp();
+    };
+
+    function updateSortIcons() {
+      ['date', 'orderNo', 'equipment', 'category', 'hours'].forEach(k => {
+        const el = document.getElementById(`sort-journal-${k}`);
+        if (el) {
+          if (window.journalSortKey === k) {
+            el.className = `fa-solid ${window.journalSortDir === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-[10px] ml-1 text-blue-600 font-bold opacity-100`;
+          } else {
+            el.className = `fa-solid fa-sort text-[10px] ml-1 opacity-30`;
+          }
+        }
+      });
+
+      ['orderNo', 'equipment', 'H', 'P', 'E', 'S', 'D+N', 'total'].forEach(k => {
+        const el = document.getElementById(`sort-pivot-${k}`);
+        if (el) {
+          if (window.pivotSortKey === k) {
+            el.className = `fa-solid ${window.pivotSortDir === 'asc' ? 'fa-sort-up' : 'fa-sort-down'} text-[10px] ml-1 text-blue-600 font-bold opacity-100`;
+          } else {
+            el.className = `fa-solid fa-sort text-[10px] ml-1 opacity-30`;
+          }
+        }
+      });
+    }
+
     // Главная функция рендеринга приложения
     window.renderApp = function() {
       const t = translations[window.currentLang] || translations.ru;
@@ -1380,15 +1480,32 @@
       const filterMonth = document.getElementById('filter-month').value;
       const filterYear = document.getElementById('filter-year').value;
 
-      // Фильтрация записей по месяцу и году
+      // 1. Фильтрация записей по месяцу и году
       const filtered = window.allEntries.filter(entry => {
         if (!entry.date) return false;
         const [y, m] = entry.date.split('-');
         return y === filterYear && m === filterMonth;
-      }).sort((a, b) => {
-        const tA = a.date ? new Date(a.date).getTime() : 0;
-        const tB = b.date ? new Date(b.date).getTime() : 0;
-        return (isNaN(tB) ? 0 : tB) - (isNaN(tA) ? 0 : tA);
+      });
+
+      // 2. Сортировка записей журнала
+      filtered.sort((a, b) => {
+        let valA = a[window.journalSortKey] ?? '';
+        let valB = b[window.journalSortKey] ?? '';
+
+        if (window.journalSortKey === 'hours') {
+          valA = parseFloat(valA) || 0;
+          valB = parseFloat(valB) || 0;
+        } else if (window.journalSortKey === 'date') {
+          valA = a.date ? new Date(a.date).getTime() : 0;
+          valB = b.date ? new Date(b.date).getTime() : 0;
+        } else {
+          valA = String(valA).toLowerCase();
+          valB = String(valB).toLowerCase();
+        }
+
+        if (valA < valB) return window.journalSortDir === 'asc' ? -1 : 1;
+        if (valA > valB) return window.journalSortDir === 'asc' ? 1 : -1;
+        return 0;
       });
 
       // Расчет общего количества часов
@@ -1399,9 +1516,11 @@
       // Расчет сводной таблицы (Pivot)
       const pivotMap = {};
       filtered.forEach(item => {
-        const key = `${item.orderNo}||${item.equipment}`;
+        const orderNo = item.orderNo ? item.orderNo.trim() : '-';
+        const equipment = item.equipment ? item.equipment.trim() : '-';
+        const key = `${orderNo}||${equipment}`;
         if (!pivotMap[key]) {
-          pivotMap[key] = { orderNo: item.orderNo, equipment: item.equipment, H: 0, P: 0, E: 0, S: 0, 'D+N': 0, total: 0 };
+          pivotMap[key] = { orderNo, equipment, H: 0, P: 0, E: 0, S: 0, 'D+N': 0, total: 0 };
         }
         const cat = item.category || 'S';
         const hrs = parseFloat(item.hours) || 0;
@@ -1411,22 +1530,37 @@
         pivotMap[key].total = Math.round((pivotMap[key].total + hrs) * 10) / 10;
       });
 
+      // Сортировка строк Pivot
+      const pivotList = Object.values(pivotMap);
+      pivotList.sort((a, b) => {
+        let valA = a[window.pivotSortKey] ?? '';
+        let valB = b[window.pivotSortKey] ?? '';
+
+        if (['H', 'P', 'E', 'S', 'D+N', 'total'].includes(window.pivotSortKey)) {
+          valA = parseFloat(valA) || 0;
+          valB = parseFloat(valB) || 0;
+        } else {
+          valA = String(valA).toLowerCase();
+          valB = String(valB).toLowerCase();
+        }
+
+        if (valA < valB) return window.pivotSortDir === 'asc' ? -1 : 1;
+        if (valA > valB) return window.pivotSortDir === 'asc' ? 1 : -1;
+        return 0;
+      });
+
       // Отрисовка Pivot
       const pivotTbody = document.getElementById('pivot-tbody');
       pivotTbody.innerHTML = '';
 
-      const pivotKeys = Object.keys(pivotMap);
-      if (pivotKeys.length === 0) {
-        pivotTbody.innerHTML = `<tr><td colSpan="7" class="text-center py-6 text-slate-400 font-normal">${t.pivot_empty}</td></tr>`;
+      if (pivotList.length === 0) {
+        pivotTbody.innerHTML = `<tr><td colSpan="8" class="text-center py-6 text-slate-400 font-normal">${t.pivot_empty}</td></tr>`;
       } else {
-        pivotKeys.forEach(key => {
-          const row = pivotMap[key];
+        pivotList.forEach(row => {
           pivotTbody.innerHTML += `
             <tr class="hover:bg-slate-50 transition border-b border-slate-100">
-              <td class="p-3">
-                <div class="font-bold text-slate-800">${escapeHTML(row.orderNo)}</div>
-                <div class="text-[11px] text-slate-500">${escapeHTML(row.equipment)}</div>
-              </td>
+              <td class="p-3 font-bold text-slate-800 whitespace-nowrap">${escapeHTML(row.orderNo)}</td>
+              <td class="p-3 text-slate-700 font-semibold border-r border-slate-100 whitespace-nowrap">${escapeHTML(row.equipment)}</td>
               <td class="p-3 text-center border-l border-slate-100 text-blue-700 font-semibold">${row.H > 0 ? row.H : '-'}</td>
               <td class="p-3 text-center text-sky-700 font-semibold">${row.P > 0 ? row.P : '-'}</td>
               <td class="p-3 text-center text-amber-700 font-semibold">${row.E > 0 ? row.E : '-'}</td>
@@ -1444,7 +1578,7 @@
       document.getElementById('entries-count-badge').innerText = `${filtered.length} ${t.entries_suffix}`;
 
       if (filtered.length === 0) {
-        const colSpan = window.currentUser ? 6 : 5;
+        const colSpan = window.currentUser ? 7 : 6;
         journalTbody.innerHTML = `<tr><td colSpan="${colSpan}" class="text-center py-6 text-slate-400 font-normal">${t.journal_empty}</td></tr>`;
       } else {
         filtered.forEach(item => {
@@ -1476,9 +1610,10 @@
             : '';
 
           journalTbody.innerHTML += `
-            <tr class="hover:bg-slate-50/80 transition">
+            <tr class="hover:bg-slate-50/80 transition border-b border-slate-100">
               <td class="p-3 text-slate-600 whitespace-nowrap font-medium">${formattedDate}</td>
-              <td class="p-3 font-bold text-slate-800">${escapeHTML(item.orderNo)}</td>
+              <td class="p-3 font-bold text-slate-800 whitespace-nowrap">${escapeHTML(item.orderNo)}</td>
+              <td class="p-3 text-slate-700 font-semibold whitespace-nowrap">${escapeHTML(item.equipment)}</td>
               <td class="p-3">
                 <span class="px-2 py-0.5 rounded text-[10px] font-bold ${badgeClass}">${escapeHTML(item.category)}</span>
               </td>
@@ -1489,6 +1624,8 @@
           `;
         });
       }
+
+      updateSortIcons();
     };
 
     // =========================================================================
