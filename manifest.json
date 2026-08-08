@@ -1,0 +1,26 @@
+{
+  "short_name": "ZPS Hours",
+  "name": "ZPS Service Hours — Учет Рабочего Времени",
+  "description": "Приложение учета рабочего времени сервисных мастеров и руководителей ZPS",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "scope": "/",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "display": "standalone",
+  "orientation": "any",
+  "categories": ["business", "productivity"]
+}
