@@ -1705,12 +1705,34 @@
         if (matchedEquip) break;
       }
 
-      // 2. Dynamic RAG: Поиск оборудования по имеющимся в БД Firestore записям
-      if (!matchedEquip && window.allEntries) {
-        for (const entry of window.allEntries) {
-          if (entry.equipment && lowerText.includes(entry.equipment.toLowerCase())) {
-            matchedEquip = entry.equipment;
+      // 2. Dynamic RAG: Автоматический подхват ЛЮБОГО нового оборудования из базы Firestore (с умной токенизацией)
+      if (!matchedEquip && window.allEntries && window.allEntries.length > 0) {
+        const uniqueEquipments = Array.from(new Set(window.allEntries.map(e => e.equipment).filter(Boolean)));
+        
+        // Сначала ищем точное или подстрочное совпадение
+        for (const equip of uniqueEquipments) {
+          const equipLower = equip.toLowerCase();
+          if (lowerText.includes(equipLower)) {
+            matchedEquip = equip;
+            processedText = processedText.replace(new RegExp(equipLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), ' ');
             break;
+          }
+        }
+
+        // Если точного нет, разбиваем новые названия из БД на токены (модель, серии, номенклатуру)
+        if (!matchedEquip) {
+          for (const equip of uniqueEquipments) {
+            // Извлекаем ключевые слова длиннее 2 символов (например: "FANUC", "KR-60", "STANKO-500")
+            const tokens = equip.split(/[\s,./\\_-]+/).filter(t => t.length >= 2);
+            for (const token of tokens) {
+              const tokenLower = token.toLowerCase();
+              if (lowerText.includes(tokenLower)) {
+                matchedEquip = equip;
+                processedText = processedText.replace(new RegExp(tokenLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), ' ');
+                break;
+              }
+            }
+            if (matchedEquip) break;
           }
         }
       }
