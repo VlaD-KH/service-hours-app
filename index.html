@@ -289,8 +289,7 @@
       <!-- Блок ошибок авторизации -->
       <div id="auth-error-msg" class="hidden p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl font-medium space-y-1"></div>
 
-      <!-- Форма входа по Email/Паролю (Закомментировано: регистрация не реализована) -->
-      <!--
+      <!-- Форма входа по Email/Паролю (Закомментирована по требованию: используем авторизацию через Google)
       <form onsubmit="handleEmailLogin(event)" class="space-y-3">
         <div>
           <label id="i18n-label-email" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">EMAIL</label>
@@ -970,7 +969,14 @@
         auth = getAuth(app);
         db = getFirestore(app);
 
-        onAuthStateChanged(auth, (user) => {
+        onAuthStateChanged(auth, async (user) => {
+          if (user && !isUserMaster(user)) {
+            console.warn("User authenticated in Firebase but NOT in ALLOWED_MASTERS:", user.email);
+            try { await signOut(auth); } catch(e){}
+            window.currentUser = null;
+            updateAuthUI(null);
+            return;
+          }
           window.currentUser = user;
           updateAuthUI(user);
           updateSyncBadge('connected', translations[window.currentLang].sync_connected);
@@ -1049,60 +1055,21 @@
     // =========================================================================
     // 3. АВТОРИЗАЦИЯ И РАЗДЕЛЕНИЕ ПРАВ (БЕЛЫЙ СПИСОК МАСТЕРОВ ИЗ window.ENV)
     // =========================================================================
-    window.ALLOWED_MASTERS = (window.ENV && Array.isArray(window.ENV.ALLOWED_MASTERS) && window.ENV.ALLOWED_MASTERS.length > 0)
-      ? window.ENV.ALLOWED_MASTERS 
-      : ['vladhrapko@gmail.com'];
+    window.ALLOWED_MASTERS = (window.ENV && Array.isArray(window.ENV.ALLOWED_MASTERS)) ? window.ENV.ALLOWED_MASTERS : [];
 
     window.isUserMaster = function(user) {
       if (!user || !user.email) return false;
-      return window.ALLOWED_MASTERS.map(e => e.trim().toLowerCase()).includes(user.email.trim().toLowerCase());
+      const masterList = (window.ALLOWED_MASTERS && window.ALLOWED_MASTERS.length > 0)
+        ? window.ALLOWED_MASTERS
+        : ['vladhrapko@gmail.com'];
+      return masterList.map(e => e.trim().toLowerCase()).includes((user.email || '').trim().toLowerCase());
     };
 
-    // Вход по Email / Паролю (с защитой от повторного клика)
-    window.handleEmailLogin = async function(e) {
-      e.preventDefault();
-      const emailInput = document.getElementById('login-email');
-      const passInput = document.getElementById('login-password');
-      const submitBtn = document.getElementById('i18n-btn-login-email');
-      const errorDiv = document.getElementById('auth-error-msg');
-      
-      const email = emailInput?.value.trim() || '';
-      const password = passInput?.value || '';
-      errorDiv.classList.add('hidden');
-
-      if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.style.opacity = '0.6';
-      }
-
-      try {
-        if (!isConfigValid) {
-          window.currentUser = { email: email || 'master@demo.com' };
-          updateAuthUI(window.currentUser);
-          toggleModal('login-modal');
-          renderApp();
-          return;
-        }
-
-        await signInWithEmailAndPassword(auth, email, password);
-        toggleModal('login-modal');
-      } catch (err) {
-        console.error("Email login error:", err);
-        errorDiv.innerHTML = getAuthErrorMessage(err.code, err.message);
-        errorDiv.classList.remove('hidden');
-      } finally {
-        if (submitBtn) {
-          submitBtn.disabled = false;
-          submitBtn.style.opacity = '1';
-        }
-      }
-    };
-
-    // Вход через Google (с защитой от повторного клика)
+    // Вход через Google (Строгая валидация белого списка ALLOWED_MASTERS)
     window.handleGoogleLogin = async function() {
       const errorDiv = document.getElementById('auth-error-msg');
-      const googleBtn = document.getElementById('i18n-btn-login-google')?.parentElement;
-      errorDiv.classList.add('hidden');
+      const googleBtn = document.getElementById('i18n-btn-login-google')?.parentElement || document.querySelector('#login-modal button[onclick*="handleGoogleLogin"]');
+      if (errorDiv) errorDiv.classList.add('hidden');
 
       if (googleBtn) {
         googleBtn.disabled = true;
@@ -1120,32 +1087,34 @@
 
         const provider = new GoogleAuthProvider();
         const result = await signInWithPopup(auth, provider);
-        const loggedUser = result.user;
+        const user = result ? result.user : null;
 
-        // Строгая проверка белого списка авторизованных мастеров
-        if (!isUserMaster(loggedUser)) {
-          console.warn("Unauthorized Google login attempt:", loggedUser.email);
+        if (user && !isUserMaster(user)) {
+          console.warn("Unauthorized Google login attempt:", user.email);
           await signOut(auth);
           window.currentUser = null;
           updateAuthUI(null);
 
-          const emailStr = escapeHTML(loggedUser.email || '');
-          const deniedMsg = window.currentLang === 'pl'
-            ? `Brak dostępu. Twój e-mail (${emailStr}) nie znajduje się na liście autoryzowanych mistrzów.`
-            : window.currentLang === 'en'
-            ? `Access denied. Your email (${emailStr}) is not on the authorized masters whitelist.`
-            : `Доступ запрещен. Ваш Email (${emailStr}) отсутствует в белом списке авторизованных мастеров!`;
-
-          errorDiv.innerHTML = `<div class="font-bold flex items-center space-x-1"><i class="fa-solid fa-shield-halved"></i> <span>Ошибка доступа</span></div><div>${deniedMsg}</div>`;
-          errorDiv.classList.remove('hidden');
+          if (errorDiv) {
+            const email = escapeHTML(user.email || 'Google Account');
+            const msgs = {
+              ru: `<div><strong>Доступ запрещен:</strong> Ваш Google-аккаунт <code>${email}</code> не входит в список авторизованных мастеров (ALLOWED_MASTERS).</div>`,
+              pl: `<div><strong>Dostęp zabroniony:</strong> Konto <code>${email}</code> nie znajduje się na liście autoryzowanych mistrzów.</div>`,
+              en: `<div><strong>Access Denied:</strong> Account <code>${email}</code> is not in the authorized masters list.</div>`
+            };
+            errorDiv.innerHTML = msgs[window.currentLang] || msgs.ru;
+            errorDiv.classList.remove('hidden');
+          }
           return;
         }
 
         toggleModal('login-modal');
       } catch (err) {
         console.error("Google login error details:", err.code, err.message, err);
-        errorDiv.innerHTML = getAuthErrorMessage(err.code, err.message);
-        errorDiv.classList.remove('hidden');
+        if (errorDiv) {
+          errorDiv.innerHTML = getAuthErrorMessage(err.code, err.message);
+          errorDiv.classList.remove('hidden');
+        }
       } finally {
         if (googleBtn) {
           googleBtn.disabled = false;
@@ -1267,8 +1236,8 @@
 
     window.handleAddEntry = async function(e) {
       e.preventDefault();
-      if (!window.currentUser || !isUserMaster(window.currentUser)) {
-        alert("Добавление записей разрешено ТОЛЬКО авторизованному Мастеру.");
+      if (!window.currentUser) {
+        alert("Добавление записей доступно только авторизованному мастеру.");
         return;
       }
       
@@ -1304,10 +1273,7 @@
     };
 
     window.openDeleteModal = function(id) {
-      if (!window.currentUser || !isUserMaster(window.currentUser)) {
-        alert("Удаление записей разрешено ТОЛЬКО авторизованному Мастеру.");
-        return;
-      }
+      if (!window.currentUser) return;
       window.pendingDeleteId = id;
       document.getElementById('delete-modal').classList.remove('hidden');
     };
@@ -1319,7 +1285,7 @@
 
     document.getElementById('confirm-delete-btn').addEventListener('click', async () => {
       const id = window.pendingDeleteId;
-      if (!id || !window.currentUser || !isUserMaster(window.currentUser)) return;
+      if (!id || !window.currentUser) return;
 
       if (isConfigValid && db) {
         try {
@@ -1821,10 +1787,7 @@
     };
 
     window.confirmAiEntrySave = async function() {
-      if (!window.currentUser || !isUserMaster(window.currentUser)) {
-        alert("Сохранение ИИ-смен разрешено ТОЛЬКО авторизованному Мастеру.");
-        return;
-      }
+      if (!window.currentUser) return;
 
       const entry = {
         date: new Date().toISOString().split('T')[0],
