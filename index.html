@@ -290,12 +290,12 @@
       <!-- Форма входа по Email/Паролю -->
       <form onsubmit="handleEmailLogin(event)" class="space-y-3">
         <div>
-          <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">EMAIL</label>
+          <label id="i18n-label-email" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">EMAIL</label>
           <input type="email" id="login-email" required placeholder="master@example.com" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50">
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">ПАРОЛЬ</label>
+          <label id="i18n-label-password" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">ПАРОЛЬ</label>
           <input type="password" id="login-password" required placeholder="••••••••" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50">
         </div>
 
@@ -456,6 +456,9 @@
         btn_understand: "Понятно",
         btn_logout: "Выйти",
         login_badge_master: "Мастер:",
+        label_email: "EMAIL",
+        label_password: "ПАРОЛЬ",
+        placeholder_notes: "Детали демонтажа, фильтры...",
         months: ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"],
         info_html: `
           <p>⚡ <strong>Облачный синхрон:</strong> Записи сохраняются в базу данных Firebase Firestore. Данные мгновенно обновляются на телефонах и ПК.</p>
@@ -528,6 +531,9 @@
         btn_understand: "Rozumiem",
         btn_logout: "Wyloguj",
         login_badge_master: "Mistrz:",
+        label_email: "EMAIL",
+        label_password: "HASŁO",
+        placeholder_notes: "Szczegóły demontażu, filtry...",
         months: ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"],
         info_html: `
           <p>⚡ <strong>Synchronizacja w chmurze:</strong> Wpisy są zapisywane w bazie danych Firebase Firestore. Dane aktualizują się natychmiastowo na telefonach i PC.</p>
@@ -600,6 +606,9 @@
         btn_understand: "Got it",
         btn_logout: "Sign Out",
         login_badge_master: "Master:",
+        label_email: "EMAIL",
+        label_password: "PASSWORD",
+        placeholder_notes: "Disassembly details, filters...",
         months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
         info_html: `
           <p>⚡ <strong>Cloud Sync:</strong> Entries are stored in Firebase Firestore. Data updates instantly on mobile devices and PCs.</p>
@@ -654,7 +663,7 @@
       document.getElementById('i18n-demo-banner-text').innerText = t.demo_banner;
       document.getElementById('i18n-filter-label').innerText = t.filter_label;
       document.getElementById('i18n-total-hours-label').innerText = t.total_hours_label;
-      document.getElementById('i18n-hours-unit').innerText = t.hours_unit;
+      // Не трогаем i18n-hours-unit — его уничтожает renderApp() через innerHTML. Перевод в renderApp().
 
       document.getElementById('i18n-form-title').innerText = t.form_title;
       document.getElementById('i18n-label-date').innerText = t.label_date;
@@ -693,6 +702,15 @@
       document.getElementById('i18n-th-cat').innerText = t.th_cat;
       document.getElementById('i18n-th-hours').innerText = t.th_hours;
       document.getElementById('i18n-th-notes').innerText = t.th_notes;
+      document.getElementById('journal-action-header').innerText = t.th_action;
+
+      // Подписи в модалке логина и плейсхолдер заметок
+      const elEmail = document.getElementById('i18n-label-email');
+      if (elEmail) elEmail.innerText = t.label_email;
+      const elPass = document.getElementById('i18n-label-password');
+      if (elPass) elPass.innerText = t.label_password;
+      const notesInput = document.getElementById('input-notes');
+      if (notesInput) notesInput.placeholder = t.placeholder_notes;
 
       document.getElementById('i18n-modal-login-title').innerText = t.modal_login_title;
       document.getElementById('i18n-modal-login-subtitle').innerText = t.modal_login_subtitle;
