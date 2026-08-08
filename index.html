@@ -358,7 +358,7 @@
   </div>
 
   <!-- ПЛАВАЮЩАЯ КНОПКА ГОЛОСОВОГО ИИ-ПОМОЩНИКА (FAB) -->
-  <div id="ai-fab-container" class="fixed bottom-6 right-6 z-40">
+  <div id="ai-fab-container" class="fixed bottom-6 right-6 z-40 hidden">
     <button onclick="handleAiFabClick()" id="ai-fab-btn" class="relative group bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white p-4 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-105 active:scale-95 flex items-center space-x-2 cursor-pointer">
       <span id="ai-fab-ping" class="absolute -top-1 -right-1 flex h-4 w-4 hidden">
         <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -568,6 +568,7 @@
         label_email: "EMAIL",
         label_password: "ПАРОЛЬ",
         placeholder_notes: "Детали демонтажа, фильтры...",
+        ai_progress_status: "Загрузка весов модели...",
         fab_label: "Надиктовать смену",
         ai_download_title: "Локальный ИИ-Помощник",
         ai_download_subtitle: "Автономная голосовая обработка смен",
@@ -657,6 +658,7 @@
         label_email: "EMAIL",
         label_password: "HASŁO",
         placeholder_notes: "Szczegóły demontażu, filtry...",
+        ai_progress_status: "Pobieranie wag modelu...",
         fab_label: "Dyktuj zmianę",
         ai_download_title: "Lokalny Asystent AI",
         ai_download_subtitle: "Autonomiczne przetwarzanie głosu",
@@ -746,6 +748,7 @@
         label_email: "EMAIL",
         label_password: "PASSWORD",
         placeholder_notes: "Disassembly details, filters...",
+        ai_progress_status: "Downloading model weights...",
         fab_label: "Dictate Shift",
         ai_download_title: "Local AI Assistant",
         ai_download_subtitle: "Offline Voice Processing",
@@ -891,6 +894,8 @@
       if (aiBtnStart) aiBtnStart.innerText = t.ai_btn_start;
       const aiBtnCancel = document.getElementById('i18n-ai-btn-cancel');
       if (aiBtnCancel) aiBtnCancel.innerText = t.btn_cancel;
+      const aiProgressStatus = document.getElementById('ai-progress-status');
+      if (aiProgressStatus) aiProgressStatus.innerText = t.ai_progress_status;
 
       const aiConfirmTitle = document.getElementById('i18n-ai-confirm-title');
       if (aiConfirmTitle) aiConfirmTitle.innerText = t.ai_confirm_title;
@@ -933,7 +938,14 @@
     }
 
     // Установка даты по умолчанию (Сегодня)
-    document.getElementById('input-date').value = new Date().toISOString().split('T')[0];
+    const _dateInput = document.getElementById('input-date');
+    if (_dateInput) _dateInput.value = new Date().toISOString().split('T')[0];
+
+    // Утилита экранирования HTML для защиты от XSS
+    const escapeHTML = (str) => String(str || '').replace(/[&<>'"]/g, tag => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[tag] || tag));
+
+    // Ссылка на отписку от Firestore для предотвращения утечек памяти
+    window._unsubFirestore = null;
 
     // Инициализация Firebase или Локального фоллбэка
     async function initApp() {
@@ -969,9 +981,11 @@
     // Подписка на коллекцию Firestore 'work_entries'
     function subscribeToFirestore() {
       if (!db) return;
+      // Отменяем предыдущую подписку для предотвращения утечки памяти
+      if (window._unsubFirestore) window._unsubFirestore();
       const entriesCollection = collection(db, 'work_entries');
 
-      onSnapshot(entriesCollection, (snapshot) => {
+      window._unsubFirestore = onSnapshot(entriesCollection, (snapshot) => {
         const fetched = [];
         snapshot.forEach((docSnap) => {
           fetched.push({ id: docSnap.id, ...docSnap.data() });
@@ -1119,12 +1133,15 @@
 
       if (!authContainer) return;
 
+      const fabContainer = document.getElementById('ai-fab-container');
+
       if (user) {
+        const safeEmail = escapeHTML(user.email);
         authContainer.innerHTML = `
           <div class="flex items-center space-x-2 bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-xl">
             <i class="fa-solid fa-user-check text-emerald-400 text-xs"></i>
-            <span class="text-xs font-semibold text-slate-200 truncate max-w-[130px]" title="${user.email}">${user.email}</span>
-            <button onclick="handleLogout()" class="text-xs text-rose-400 hover:text-rose-300 font-bold ml-1 transition" title="${t.btn_logout}">
+            <span class="text-xs font-semibold text-slate-200 truncate max-w-[130px]" title="${safeEmail}">${safeEmail}</span>
+            <button onclick="window.handleLogout()" class="text-xs text-rose-400 hover:text-rose-300 font-bold ml-1 transition" title="${escapeHTML(t.btn_logout)}">
               <i class="fa-solid fa-right-from-bracket"></i>
             </button>
           </div>
@@ -1133,17 +1150,19 @@
         if (masterFormCard) masterFormCard.classList.remove('hidden');
         if (readOnlyCard) readOnlyCard.classList.add('hidden');
         if (actionHeader) actionHeader.classList.remove('hidden');
+        if (fabContainer) fabContainer.classList.remove('hidden');
       } else {
         authContainer.innerHTML = `
           <button onclick="toggleModal('login-modal')" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl transition flex items-center space-x-1.5 shadow-sm cursor-pointer">
             <i class="fa-solid fa-key"></i>
-            <span>${t.btn_login_master}</span>
+            <span>${escapeHTML(t.btn_login_master)}</span>
           </button>
         `;
 
         if (masterFormCard) masterFormCard.classList.add('hidden');
         if (readOnlyCard) readOnlyCard.classList.remove('hidden');
         if (actionHeader) actionHeader.classList.add('hidden');
+        if (fabContainer) fabContainer.classList.add('hidden');
       }
     }
 
@@ -1320,7 +1339,11 @@
         if (!entry.date) return false;
         const [y, m] = entry.date.split('-');
         return y === filterYear && m === filterMonth;
-      }).sort((a, b) => new Date(b.date) - new Date(a.date));
+      }).sort((a, b) => {
+        const tA = a.date ? new Date(a.date).getTime() : 0;
+        const tB = b.date ? new Date(b.date).getTime() : 0;
+        return (isNaN(tB) ? 0 : tB) - (isNaN(tA) ? 0 : tA);
+      });
 
       // Расчет общего количества часов
       const rawTotalHours = filtered.reduce((sum, item) => sum + (parseFloat(item.hours) || 0), 0);
@@ -1355,8 +1378,8 @@
           pivotTbody.innerHTML += `
             <tr class="hover:bg-slate-50 transition border-b border-slate-100">
               <td class="p-3">
-                <div class="font-bold text-slate-800">${row.orderNo}</div>
-                <div class="text-[11px] text-slate-500">${row.equipment}</div>
+                <div class="font-bold text-slate-800">${escapeHTML(row.orderNo)}</div>
+                <div class="text-[11px] text-slate-500">${escapeHTML(row.equipment)}</div>
               </td>
               <td class="p-3 text-center border-l border-slate-100 text-blue-700 font-semibold">${row.H > 0 ? row.H : '-'}</td>
               <td class="p-3 text-center text-sky-700 font-semibold">${row.P > 0 ? row.P : '-'}</td>
@@ -1409,12 +1432,12 @@
           journalTbody.innerHTML += `
             <tr class="hover:bg-slate-50/80 transition">
               <td class="p-3 text-slate-600 whitespace-nowrap font-medium">${formattedDate}</td>
-              <td class="p-3 font-bold text-slate-800">${item.orderNo}</td>
+              <td class="p-3 font-bold text-slate-800">${escapeHTML(item.orderNo)}</td>
               <td class="p-3">
-                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${badgeClass}">${item.category}</span>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${badgeClass}">${escapeHTML(item.category)}</span>
               </td>
               <td class="p-3 font-bold text-right text-slate-800">${item.hours}</td>
-              <td class="p-3 text-slate-500 max-w-[160px] truncate" title="${item.notes || ''}">${item.notes || '-'}</td>
+              <td class="p-3 text-slate-500 max-w-[160px] truncate" title="${escapeHTML(item.notes || '')}">${escapeHTML(item.notes || '-')}</td>
               ${actionTd}
             </tr>
           `;
@@ -1538,13 +1561,13 @@
 
       // 1. Поиск номера заказа (4-6 цифр)
       const orderMatch = text.match(/\b\d{4,6}\b/);
-      const extractedOrder = orderMatch ? orderMatch[0] : (document.getElementById('input-order')?.value || '410132');
+      const extractedOrder = orderMatch ? orderMatch[0] : (document.getElementById('input-order')?.value || '');
 
       // 2. Поиск отработанных часов (например: "4.5 часа", "3 godz", "5 hours")
       const hoursMatch = text.match(/(\d+[.,]?\d*)\s*(час|ч|godz|hour|h)/i) || text.match(/\b(\d+[.,]?\d*)\b/);
-      let extractedHours = 4.0;
+      let extractedHours = '';
       if (hoursMatch) {
-        extractedHours = parseFloat(hoursMatch[1].replace(',', '.')) || 4.0;
+        extractedHours = parseFloat(hoursMatch[1].replace(',', '.')) || '';
       }
 
       // 3. Поиск оборудования (WM-15P, MAB-40, DH-350, UCS-40)
@@ -1554,7 +1577,7 @@
         extractedEquip = equipMatch[0].toUpperCase();
       } else {
         const knownMatch = (window.allEntries || []).find(e => e.orderNo === extractedOrder && e.equipment);
-        extractedEquip = knownMatch ? knownMatch.equipment : 'WM-15P.00/M nr 26';
+        extractedEquip = knownMatch ? knownMatch.equipment : '';
       }
 
       // 4. Определение категории категорий (H, P, E, S, D+N)
@@ -1589,7 +1612,18 @@
         createdAt: new Date().toISOString()
       };
 
-      if (!entry.orderNo || !entry.equipment) return;
+      if (!entry.orderNo || !entry.equipment) {
+        const t = translations[window.currentLang] || translations.ru;
+        const orderInput = document.getElementById('ai-input-order');
+        const equipInput = document.getElementById('ai-input-equipment');
+        if (!entry.orderNo && orderInput) orderInput.classList.add('border-red-500', 'ring-2', 'ring-red-300');
+        if (!entry.equipment && equipInput) equipInput.classList.add('border-red-500', 'ring-2', 'ring-red-300');
+        setTimeout(() => {
+          if (orderInput) orderInput.classList.remove('border-red-500', 'ring-2', 'ring-red-300');
+          if (equipInput) equipInput.classList.remove('border-red-500', 'ring-2', 'ring-red-300');
+        }, 2000);
+        return;
+      }
 
       if (isConfigValid && db) {
         try {
