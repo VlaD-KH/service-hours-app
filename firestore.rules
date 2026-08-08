@@ -5,11 +5,19 @@ service cloud.firestore {
     
     // Правила безопасности для коллекции учета рабочего времени
     match /work_entries/{entryId} {
-      
       // Разрешить чтение всем пользователям (Начальнику / Гостю)
       allow read: if true;
       
       // Разрешить создание, обновление и удаление ТОЛЬКО авторизованному мастеру
+      allow create, update, delete: if request.auth != null;
+    }
+
+    // Правила безопасности для коллекции смен
+    match /work_shifts/{shiftId} {
+      // Разрешить чтение всем
+      allow read: if true;
+      
+      // Разрешить запись только авторизованному мастеру
       allow create, update, delete: if request.auth != null;
     }
     

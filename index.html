@@ -1963,7 +1963,7 @@
           window.currentShiftDocId = docRef.id;
         } catch (err) {
           console.error('Ошибка создания смены:', err);
-          showToast('Ошибка сохранения смены', 'error');
+          showToast('Ошибка сохранения смены: ' + (err.code || err.message || err), 'error');
           return;
         }
       } else {
