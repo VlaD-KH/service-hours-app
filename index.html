@@ -570,6 +570,7 @@
       updateDoc,
       setDoc,
       getDoc,
+      getDocs,
       query,
       where
     } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -1809,24 +1810,28 @@
               ? `${dayShift.timeStart}\u202f\u2013\u202f${dayShift.timeEnd}` 
               : `${dayShift.timeStart}\u202f\u2013\u202f...`;
             
-            // GPS-тултип с координатами и ссылками на Google Maps
+            // GPS-тултип с координатами и ссылками на Google Maps (поддержка обеих точек: Старт + Стоп)
             let gpsTooltip = '';
-            if (dayShift.latStart != null && dayShift.lngStart != null) {
-              gpsTooltip += `\u0421\u0442\u0430\u0440\u0442: ${dayShift.latStart.toFixed(4)}, ${dayShift.lngStart.toFixed(4)}`;
-            }
-            if (dayShift.latEnd != null && dayShift.lngEnd != null) {
-              gpsTooltip += ` | \u0421\u0442\u043e\u043f: ${dayShift.latEnd.toFixed(4)}, ${dayShift.lngEnd.toFixed(4)}`;
-            }
+            let mapsUrl = '';
+            
+            const hasStart = dayShift.latStart != null && dayShift.lngStart != null;
+            const hasEnd = dayShift.latEnd != null && dayShift.lngEnd != null;
 
-            // Ссылка на Google Maps (стартовая точка)
-            const mapsUrl = (dayShift.latStart != null && dayShift.lngStart != null)
-              ? `https://maps.google.com/?q=${dayShift.latStart},${dayShift.lngStart}`
-              : '';
+            if (hasStart && hasEnd) {
+              gpsTooltip = `🚀 Старт: ${dayShift.latStart.toFixed(4)}, ${dayShift.lngStart.toFixed(4)} | 🏁 Стоп: ${dayShift.latEnd.toFixed(4)}, ${dayShift.lngEnd.toFixed(4)}`;
+              mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${dayShift.latStart},${dayShift.lngStart}&destination=${dayShift.latEnd},${dayShift.lngEnd}`;
+            } else if (hasStart) {
+              gpsTooltip = `🚀 Старт: ${dayShift.latStart.toFixed(4)}, ${dayShift.lngStart.toFixed(4)}`;
+              mapsUrl = `https://maps.google.com/?q=${dayShift.latStart},${dayShift.lngStart}`;
+            } else if (hasEnd) {
+              gpsTooltip = `🏁 Стоп: ${dayShift.latEnd.toFixed(4)}, ${dayShift.lngEnd.toFixed(4)}`;
+              mapsUrl = `https://maps.google.com/?q=${dayShift.latEnd},${dayShift.lngEnd}`;
+            }
 
             if (mapsUrl) {
-              shiftTimeHtml = `<a href="${mapsUrl}" target="_blank" rel="noopener" class="text-emerald-600 hover:text-emerald-800 font-semibold underline decoration-dotted cursor-pointer" title="\ud83d\udccd ${gpsTooltip}">${timeRange}</a>`;
+              shiftTimeHtml = `<a href="${mapsUrl}" target="_blank" rel="noopener" class="text-emerald-600 hover:text-emerald-800 font-semibold underline decoration-dotted cursor-pointer" title="${escapeHTML(gpsTooltip)}">${timeRange}</a>`;
             } else {
-              shiftTimeHtml = `<span class="text-emerald-600 font-semibold" title="${gpsTooltip}">${timeRange}</span>`;
+              shiftTimeHtml = `<span class="text-emerald-600 font-semibold" title="${escapeHTML(gpsTooltip)}">${timeRange}</span>`;
             }
           }
 
@@ -2116,6 +2121,7 @@
           const docRef = await addDoc(collection(db, 'work_shifts'), { ...shiftData });
           shiftData.firestoreId = docRef.id;
           window.currentShiftDocId = docRef.id;
+          saveLocalShifts(filteredShifts);
         } catch (err) {
           console.warn('Firestore write warning for work_shifts:', err);
         }
@@ -2152,14 +2158,28 @@
         window.allShifts = localShifts;
       }
 
-      if (isConfigValid && db && window.currentShiftDocId) {
+      if (isConfigValid && db) {
         try {
-          const shiftRef = doc(db, 'work_shifts', window.currentShiftDocId);
-          await updateDoc(shiftRef, {
-            timeEnd: timeEnd,
-            latEnd: gps.lat,
-            lngEnd: gps.lng
-          });
+          let docToUpdateId = window.currentShiftDocId;
+          // Если текущий ID локальный или отсутствует, ищем незавершенную смену за сегодня в Firestore
+          if (!docToUpdateId || docToUpdateId.startsWith('shift-')) {
+            const q = query(collection(db, 'work_shifts'), 
+              where('date', '==', getLocalDateString()), 
+              where('masterEmail', '==', window.currentUser?.email || ''));
+            const snap = await getDocs(q);
+            snap.forEach(d => {
+              if (!d.data().timeEnd) docToUpdateId = d.id;
+            });
+          }
+
+          if (docToUpdateId && !docToUpdateId.startsWith('shift-')) {
+            const shiftRef = doc(db, 'work_shifts', docToUpdateId);
+            await updateDoc(shiftRef, {
+              timeEnd: timeEnd,
+              latEnd: gps.lat,
+              lngEnd: gps.lng
+            });
+          }
         } catch (err) {
           console.warn('Firestore update warning for work_shifts:', err);
         }
