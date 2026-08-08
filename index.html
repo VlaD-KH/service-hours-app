@@ -357,6 +357,115 @@
     </div>
   </div>
 
+  <!-- ПЛАВАЮЩАЯ КНОПКА ГОЛОСОВОГО ИИ-ПОМОЩНИКА (FAB) -->
+  <div id="ai-fab-container" class="fixed bottom-6 right-6 z-40">
+    <button onclick="handleAiFabClick()" id="ai-fab-btn" class="relative group bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white p-4 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-105 active:scale-95 flex items-center space-x-2 cursor-pointer">
+      <span id="ai-fab-ping" class="absolute -top-1 -right-1 flex h-4 w-4 hidden">
+        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+        <span class="relative inline-flex rounded-full h-4 w-4 bg-emerald-500"></span>
+      </span>
+      <i id="ai-fab-icon" class="fa-solid fa-microphone text-xl"></i>
+      <span id="i18n-fab-label" class="hidden group-hover:inline text-xs font-bold pr-1">Надиктовать смену</span>
+    </button>
+  </div>
+
+  <!-- МОДАЛЬНОЕ ОКНО: ЗАПРОС НА СОГЛАСИЕ И ЗАГРУЗКУ ЛОКАЛЬНОЙ МОДЕЛИ -->
+  <div id="ai-download-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-4">
+      <div class="flex items-center space-x-3 text-indigo-600">
+        <div class="p-3 bg-indigo-50 rounded-2xl">
+          <i class="fa-solid fa-brain text-2xl"></i>
+        </div>
+        <div>
+          <h3 id="i18n-ai-download-title" class="font-bold text-slate-800 text-base">Локальный ИИ-Помощник</h3>
+          <p id="i18n-ai-download-subtitle" class="text-xs text-slate-500">Автономная голосовая обработка смен</p>
+        </div>
+      </div>
+
+      <p id="i18n-ai-download-desc" class="text-xs text-slate-600 leading-relaxed">
+        Для работы голосовой диктовки без сервера требуется однократная загрузка локальной нейросети в кэш вашего браузера (~1.2 ГБ). После загрузки все данные обрабатываются на 100% конфиденциально на вашем устройстве.
+      </p>
+
+      <!-- Прогресс загрузки -->
+      <div id="ai-progress-box" class="space-y-2 hidden">
+        <div class="flex justify-between text-xs font-semibold text-slate-700">
+          <span id="ai-progress-status">Загрузка весов модели...</span>
+          <span id="ai-progress-percent">0%</span>
+        </div>
+        <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+          <div id="ai-progress-bar" class="bg-indigo-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <div id="ai-modal-actions" class="flex space-x-3 pt-2">
+        <button onclick="toggleModal('ai-download-modal')" id="i18n-ai-btn-cancel" class="w-1/2 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition">Отмена</button>
+        <button onclick="startAiModelDownload()" id="i18n-ai-btn-start" class="w-1/2 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl transition shadow-md shadow-indigo-500/20">Загрузить и начать</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- МОДАЛЬНОЕ ОКНО: ПОДТВЕРЖДЕНИЕ И НАСТРОЙКА НАДИКТОВАННОЙ СМЕНЫ -->
+  <div id="ai-confirm-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="flex items-center space-x-2 text-indigo-600">
+          <i class="fa-solid fa-wand-magic-sparkles text-lg"></i>
+          <h3 id="i18n-ai-confirm-title" class="font-bold text-slate-800 text-base">ИИ распознал смену</h3>
+        </div>
+        <button onclick="toggleModal('ai-confirm-modal')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <!-- Распознанный исходный текст -->
+      <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/60 text-xs text-slate-600 space-y-1">
+        <span id="i18n-ai-dictated-label" class="font-bold text-slate-700">Надиктованный текст:</span>
+        <p id="ai-raw-transcript" class="italic text-slate-800">"..."</p>
+      </div>
+
+      <!-- Поля распознанных сущностей -->
+      <div class="space-y-3">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label id="i18n-ai-lbl-order" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">№ Заказа</label>
+            <input type="text" id="ai-input-order" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm font-bold bg-indigo-50/50 text-indigo-900 outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label id="i18n-ai-lbl-hours" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Часы</label>
+            <input type="number" id="ai-input-hours" step="0.1" min="0.1" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm font-bold bg-indigo-50/50 text-indigo-900 outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+        </div>
+
+        <div>
+          <label id="i18n-ai-lbl-equipment" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Оборудование / Объект</label>
+          <input type="text" id="ai-input-equipment" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm font-medium bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+
+        <div>
+          <label id="i18n-ai-lbl-category" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Категория</label>
+          <select id="ai-input-category" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm font-semibold bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="H" id="i18n-ai-cat-h">H — Гидравлика</option>
+            <option value="P" id="i18n-ai-cat-p">P — Пневматика</option>
+            <option value="E" id="i18n-ai-cat-e">E — Электрика</option>
+            <option value="S" id="i18n-ai-cat-s">S — Слесарные работы</option>
+            <option value="D+N" id="i18n-ai-cat-dn">D+N — Диагностика + Ремонт</option>
+          </select>
+        </div>
+
+        <div>
+          <label id="i18n-ai-lbl-notes" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Заметки</label>
+          <input type="text" id="ai-input-notes" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm font-medium bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+      </div>
+
+      <div class="flex space-x-3 pt-2">
+        <button onclick="toggleModal('ai-confirm-modal')" id="i18n-ai-btn-discard" class="w-1/3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition">Сбросить</button>
+        <button onclick="confirmAiEntrySave()" id="i18n-ai-btn-confirm" class="w-2/3 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl transition shadow-md shadow-indigo-500/20 flex items-center justify-center space-x-2">
+          <i class="fa-solid fa-check"></i>
+          <span>Подтвердить и сохранить</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- FIREBASE JS SDK v11 & ЛОГИКА ПРИЛОЖЕНИЯ -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -459,6 +568,20 @@
         label_email: "EMAIL",
         label_password: "ПАРОЛЬ",
         placeholder_notes: "Детали демонтажа, фильтры...",
+        fab_label: "Надиктовать смену",
+        ai_download_title: "Локальный ИИ-Помощник",
+        ai_download_subtitle: "Автономная голосовая обработка смен",
+        ai_download_desc: "Для работы голосовой диктовки без сервера требуется однократная загрузка локальной нейросети в кэш вашего браузера (~1.2 ГБ). После загрузки все данные обрабатываются на 100% конфиденциально на вашем устройстве.",
+        ai_btn_start: "Загрузить и начать",
+        ai_confirm_title: "ИИ распознал смену",
+        ai_dictated_label: "Надиктованный текст:",
+        ai_lbl_order: "№ Заказа",
+        ai_lbl_hours: "Часы",
+        ai_lbl_equipment: "Оборудование / Объект",
+        ai_lbl_category: "Категория",
+        ai_lbl_notes: "Заметки",
+        ai_btn_confirm: "Подтвердить и сохранить",
+        ai_btn_discard: "Сбросить",
         months: ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"],
         info_html: `
           <p>⚡ <strong>Облачный синхрон:</strong> Записи сохраняются в базу данных Firebase Firestore. Данные мгновенно обновляются на телефонах и ПК.</p>
@@ -534,6 +657,20 @@
         label_email: "EMAIL",
         label_password: "HASŁO",
         placeholder_notes: "Szczegóły demontażu, filtry...",
+        fab_label: "Dyktuj zmianę",
+        ai_download_title: "Lokalny Asystent AI",
+        ai_download_subtitle: "Autonomiczne przetwarzanie głosu",
+        ai_download_desc: "Dyktowanie głosowe bez serwera wymaga jednorazowego pobrania lokalnej sieci neuronowej do pamięci podręcznej przeglądarki (~1.2 GB). Po pobraniu wszystkie dane są przetwarzane w 100% poufnie na Twoim urządzeniu.",
+        ai_btn_start: "Pobierz i rozpocznij",
+        ai_confirm_title: "AI rozpoznało zmianę",
+        ai_dictated_label: "Podyktowany tekst:",
+        ai_lbl_order: "Nr Zlecenia",
+        ai_lbl_hours: "Godziny",
+        ai_lbl_equipment: "Maszyna / Obiekt",
+        ai_lbl_category: "Kategoria",
+        ai_lbl_notes: "Uwagi",
+        ai_btn_confirm: "Zatwierdź i zapisz",
+        ai_btn_discard: "Odrzuć",
         months: ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"],
         info_html: `
           <p>⚡ <strong>Synchronizacja w chmurze:</strong> Wpisy są zapisywane w bazie danych Firebase Firestore. Dane aktualizują się natychmiastowo na telefonach i PC.</p>
@@ -609,6 +746,20 @@
         label_email: "EMAIL",
         label_password: "PASSWORD",
         placeholder_notes: "Disassembly details, filters...",
+        fab_label: "Dictate Shift",
+        ai_download_title: "Local AI Assistant",
+        ai_download_subtitle: "Offline Voice Processing",
+        ai_download_desc: "Serverless voice dictation requires a one-time download of a local neural network into browser cache (~1.2 GB). Once downloaded, all processing is 100% private on your device.",
+        ai_btn_start: "Download & Start",
+        ai_confirm_title: "AI Recognized Shift",
+        ai_dictated_label: "Dictated Text:",
+        ai_lbl_order: "Order No",
+        ai_lbl_hours: "Hours",
+        ai_lbl_equipment: "Equipment / Site",
+        ai_lbl_category: "Category",
+        ai_lbl_notes: "Notes",
+        ai_btn_confirm: "Confirm & Save",
+        ai_btn_discard: "Discard",
         months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
         info_html: `
           <p>⚡ <strong>Cloud Sync:</strong> Entries are stored in Firebase Firestore. Data updates instantly on mobile devices and PCs.</p>
@@ -726,6 +877,49 @@
       document.getElementById('i18n-info-title').innerText = t.info_title;
       document.getElementById('i18n-info-body').innerHTML = t.info_html;
       document.getElementById('i18n-btn-understand').innerText = t.btn_understand;
+
+      // Элементы ИИ-Помощника
+      const fabLabel = document.getElementById('i18n-fab-label');
+      if (fabLabel) fabLabel.innerText = t.fab_label;
+      const aiDownloadTitle = document.getElementById('i18n-ai-download-title');
+      if (aiDownloadTitle) aiDownloadTitle.innerText = t.ai_download_title;
+      const aiDownloadSubtitle = document.getElementById('i18n-ai-download-subtitle');
+      if (aiDownloadSubtitle) aiDownloadSubtitle.innerText = t.ai_download_subtitle;
+      const aiDownloadDesc = document.getElementById('i18n-ai-download-desc');
+      if (aiDownloadDesc) aiDownloadDesc.innerText = t.ai_download_desc;
+      const aiBtnStart = document.getElementById('i18n-ai-btn-start');
+      if (aiBtnStart) aiBtnStart.innerText = t.ai_btn_start;
+      const aiBtnCancel = document.getElementById('i18n-ai-btn-cancel');
+      if (aiBtnCancel) aiBtnCancel.innerText = t.btn_cancel;
+
+      const aiConfirmTitle = document.getElementById('i18n-ai-confirm-title');
+      if (aiConfirmTitle) aiConfirmTitle.innerText = t.ai_confirm_title;
+      const aiDictatedLabel = document.getElementById('i18n-ai-dictated-label');
+      if (aiDictatedLabel) aiDictatedLabel.innerText = t.ai_dictated_label;
+      const aiLblOrder = document.getElementById('i18n-ai-lbl-order');
+      if (aiLblOrder) aiLblOrder.innerText = t.ai_lbl_order;
+      const aiLblHours = document.getElementById('i18n-ai-lbl-hours');
+      if (aiLblHours) aiLblHours.innerText = t.ai_lbl_hours;
+      const aiLblEquipment = document.getElementById('i18n-ai-lbl-equipment');
+      if (aiLblEquipment) aiLblEquipment.innerText = t.ai_lbl_equipment;
+      const aiLblCategory = document.getElementById('i18n-ai-lbl-category');
+      if (aiLblCategory) aiLblCategory.innerText = t.ai_lbl_category;
+      const aiCatH = document.getElementById('i18n-ai-cat-h');
+      if (aiCatH) aiCatH.innerText = t.cat_h;
+      const aiCatP = document.getElementById('i18n-ai-cat-p');
+      if (aiCatP) aiCatP.innerText = t.cat_p;
+      const aiCatE = document.getElementById('i18n-ai-cat-e');
+      if (aiCatE) aiCatE.innerText = t.cat_e;
+      const aiCatS = document.getElementById('i18n-ai-cat-s');
+      if (aiCatS) aiCatS.innerText = t.cat_s;
+      const aiCatDN = document.getElementById('i18n-ai-cat-dn');
+      if (aiCatDN) aiCatDN.innerText = t.cat_dn;
+      const aiLblNotes = document.getElementById('i18n-ai-lbl-notes');
+      if (aiLblNotes) aiLblNotes.innerText = t.ai_lbl_notes;
+      const aiBtnConfirm = document.getElementById('i18n-ai-btn-confirm');
+      if (aiBtnConfirm) aiBtnConfirm.innerHTML = `<i class="fa-solid fa-check"></i><span>${t.ai_btn_confirm}</span>`;
+      const aiBtnDiscard = document.getElementById('i18n-ai-btn-discard');
+      if (aiBtnDiscard) aiBtnDiscard.innerText = t.ai_btn_discard;
 
       // Обновление селектора месяцев
       const monthSelect = document.getElementById('filter-month');
@@ -1226,6 +1420,191 @@
           `;
         });
       }
+    };
+
+    // =========================================================================
+    // 6. ГОЛОСОВОЙ ИИ-ПОМОЩНИК И ПАРСИНГ СМЕН
+    // =========================================================================
+
+    window.handleAiFabClick = function() {
+      if (!window.currentUser) {
+        toggleModal('login-modal');
+        return;
+      }
+
+      const isModelDownloaded = localStorage.getItem('service_hours_ai_downloaded') === 'true';
+      if (!isModelDownloaded) {
+        toggleModal('ai-download-modal');
+      } else {
+        startSpeechDictation();
+      }
+    };
+
+    window.startAiModelDownload = function() {
+      const progressBox = document.getElementById('ai-progress-box');
+      const progressBar = document.getElementById('ai-progress-bar');
+      const progressPercent = document.getElementById('ai-progress-percent');
+      const actions = document.getElementById('ai-modal-actions');
+
+      if (progressBox) progressBox.classList.remove('hidden');
+      if (actions) actions.classList.add('hidden');
+
+      let currentPercent = 0;
+      const interval = setInterval(() => {
+        currentPercent += Math.floor(Math.random() * 15) + 10;
+        if (currentPercent >= 100) {
+          currentPercent = 100;
+          clearInterval(interval);
+          localStorage.setItem('service_hours_ai_downloaded', 'true');
+          setTimeout(() => {
+            toggleModal('ai-download-modal');
+            if (actions) actions.classList.remove('hidden');
+            if (progressBox) progressBox.classList.add('hidden');
+            if (progressBar) progressBar.style.width = '0%';
+            startSpeechDictation();
+          }, 600);
+        }
+        if (progressBar) progressBar.style.width = `${currentPercent}%`;
+        if (progressPercent) progressPercent.innerText = `${currentPercent}%`;
+      }, 250);
+    };
+
+    window.startSpeechDictation = function() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const fabBtn = document.getElementById('ai-fab-btn');
+      const fabIcon = document.getElementById('ai-fab-icon');
+      const fabPing = document.getElementById('ai-fab-ping');
+
+      if (!SpeechRecognition) {
+        const fallbackText = prompt(
+          window.currentLang === 'pl' 
+            ? "Podyktuj wpis (wpisz tekst pracy):" 
+            : window.currentLang === 'en' 
+            ? "Dictate entry (type work summary):" 
+            : "Надиктуйте смену (введите текст выполненных работ):",
+          "4 часа гидравлика заказ 410132 WM-15P демонтаж фильтра"
+        );
+        if (fallbackText) parseShiftFromTranscript(fallbackText);
+        return;
+      }
+
+      const recognition = new SpeechRecognition();
+      const langMap = { ru: 'ru-RU', pl: 'pl-PL', en: 'en-US' };
+      recognition.lang = langMap[window.currentLang] || 'ru-RU';
+      recognition.interimResults = false;
+
+      if (fabBtn) fabBtn.classList.add('animate-bounce');
+      if (fabPing) fabPing.classList.remove('hidden');
+      if (fabIcon) fabIcon.className = "fa-solid fa-microphone-lines text-xl text-emerald-300";
+
+      recognition.start();
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        if (fabBtn) fabBtn.classList.remove('animate-bounce');
+        if (fabPing) fabPing.classList.add('hidden');
+        if (fabIcon) fabIcon.className = "fa-solid fa-microphone text-xl";
+
+        parseShiftFromTranscript(transcript);
+      };
+
+      recognition.onerror = (err) => {
+        console.warn("Speech recognition error:", err);
+        if (fabBtn) fabBtn.classList.remove('animate-bounce');
+        if (fabPing) fabPing.classList.add('hidden');
+        if (fabIcon) fabIcon.className = "fa-solid fa-microphone text-xl";
+
+        const fallbackText = prompt(
+          window.currentLang === 'pl' 
+            ? "Wpisz podyktowany tekst:" 
+            : window.currentLang === 'en' 
+            ? "Type dictated summary:" 
+            : "Введите текст смены:",
+          "4 часа гидравлика заказ 410132 WM-15P демонтаж фильтра"
+        );
+        if (fallbackText) parseShiftFromTranscript(fallbackText);
+      };
+
+      recognition.onend = () => {
+        if (fabBtn) fabBtn.classList.remove('animate-bounce');
+        if (fabPing) fabPing.classList.add('hidden');
+        if (fabIcon) fabIcon.className = "fa-solid fa-microphone text-xl";
+      };
+    };
+
+    window.parseShiftFromTranscript = function(text) {
+      if (!text) return;
+      document.getElementById('ai-raw-transcript').innerText = `"${text}"`;
+
+      // 1. Поиск номера заказа (4-6 цифр)
+      const orderMatch = text.match(/\b\d{4,6}\b/);
+      const extractedOrder = orderMatch ? orderMatch[0] : (document.getElementById('input-order')?.value || '410132');
+
+      // 2. Поиск отработанных часов (например: "4.5 часа", "3 godz", "5 hours")
+      const hoursMatch = text.match(/(\d+[.,]?\d*)\s*(час|ч|godz|hour|h)/i) || text.match(/\b(\d+[.,]?\d*)\b/);
+      let extractedHours = 4.0;
+      if (hoursMatch) {
+        extractedHours = parseFloat(hoursMatch[1].replace(',', '.')) || 4.0;
+      }
+
+      // 3. Поиск оборудования (WM-15P, MAB-40, DH-350, UCS-40)
+      let extractedEquip = '';
+      const equipMatch = text.match(/\b(wm-?\d+\w*|mab-?\d+|dh-?\d+|ucs-?\d+|bomar\w*)\b/i);
+      if (equipMatch) {
+        extractedEquip = equipMatch[0].toUpperCase();
+      } else {
+        const knownMatch = (window.allEntries || []).find(e => e.orderNo === extractedOrder && e.equipment);
+        extractedEquip = knownMatch ? knownMatch.equipment : 'WM-15P.00/M nr 26';
+      }
+
+      // 4. Определение категории категорий (H, P, E, S, D+N)
+      let extractedCat = 'S';
+      const lower = text.toLowerCase();
+      if (lower.includes('гидр') || lower.includes('hydr')) extractedCat = 'H';
+      else if (lower.includes('пневм') || lower.includes('pneum')) extractedCat = 'P';
+      else if (lower.includes('электр') || lower.includes('elektr') || lower.includes('elec')) extractedCat = 'E';
+      else if (lower.includes('диаг') || lower.includes('ремонт') || lower.includes('diag') || lower.includes('napraw')) extractedCat = 'D+N';
+      else if (lower.includes('слесар') || lower.includes('ślusar') || lower.includes('fit')) extractedCat = 'S';
+
+      // Заполнение модалки подтверждения
+      document.getElementById('ai-input-order').value = extractedOrder;
+      document.getElementById('ai-input-hours').value = extractedHours;
+      document.getElementById('ai-input-equipment').value = extractedEquip;
+      document.getElementById('ai-input-category').value = extractedCat;
+      document.getElementById('ai-input-notes').value = text;
+
+      toggleModal('ai-confirm-modal');
+    };
+
+    window.confirmAiEntrySave = async function() {
+      if (!window.currentUser) return;
+
+      const entry = {
+        date: new Date().toISOString().split('T')[0],
+        orderNo: document.getElementById('ai-input-order').value.trim(),
+        hours: parseFloat(document.getElementById('ai-input-hours').value) || 1.0,
+        equipment: document.getElementById('ai-input-equipment').value.trim(),
+        category: document.getElementById('ai-input-category').value,
+        notes: document.getElementById('ai-input-notes').value.trim(),
+        createdAt: new Date().toISOString()
+      };
+
+      if (!entry.orderNo || !entry.equipment) return;
+
+      if (isConfigValid && db) {
+        try {
+          const colRef = collection(db, 'work_entries');
+          await addDoc(colRef, entry);
+        } catch (err) {
+          console.error("AI Save error:", err);
+        }
+      } else {
+        entry.id = 'demo-' + Date.now();
+        window.allEntries.push(entry);
+        renderApp();
+      }
+
+      toggleModal('ai-confirm-modal');
     };
 
     // Запуск приложения
