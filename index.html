@@ -902,6 +902,7 @@
     window.allEntries = [];
     window.allShifts = [];
     window.pendingDeleteId = null;
+    window.pendingDeleteShiftId = null;
     window.currentUser = null;
     window.isShiftActive = false;
     window.currentShiftDocId = null;
@@ -1420,26 +1421,64 @@
       document.getElementById('delete-modal').classList.remove('hidden');
     };
 
+    window.openDeleteShiftModal = function(shiftId) {
+      if (!window.currentUser) return;
+      window.pendingDeleteShiftId = shiftId;
+      document.getElementById('delete-modal').classList.remove('hidden');
+    };
+
     window.closeDeleteModal = function() {
       window.pendingDeleteId = null;
+      window.pendingDeleteShiftId = null;
       document.getElementById('delete-modal').classList.add('hidden');
     };
 
     document.getElementById('confirm-delete-btn').addEventListener('click', async () => {
       const id = window.pendingDeleteId;
-      if (!id || !window.currentUser) return;
+      const shiftId = window.pendingDeleteShiftId;
+      if ((!id && !shiftId) || !window.currentUser) return;
 
-      if (isConfigValid && db) {
-        try {
-          const docRef = doc(db, 'work_entries', id);
-          await deleteDoc(docRef);
-        } catch (err) {
-          console.error("Delete error:", err);
-          alert("Не удалось удалить запись. Проверьте права доступа.");
+      if (id) {
+        if (isConfigValid && db) {
+          try {
+            const docRef = doc(db, 'work_entries', id);
+            await deleteDoc(docRef);
+          } catch (err) {
+            console.error("Delete error:", err);
+            alert("Не удалось удалить запись. Проверьте права доступа.");
+          }
+        } else {
+          window.allEntries = window.allEntries.filter(e => e.id !== id);
+          renderApp();
         }
-      } else {
-        window.allEntries = window.allEntries.filter(e => e.id !== id);
-        renderApp();
+      } else if (shiftId) {
+        if (isConfigValid && db) {
+          try {
+            const docRef = doc(db, 'work_shifts', shiftId);
+            await deleteDoc(docRef);
+            
+            // Если удалена текущая активная смена, сбрасываем ее состояние
+            if (shiftId === window.currentShiftDocId) {
+              window.isShiftActive = false;
+              window.currentShiftDocId = null;
+              window.shiftStartTimestamp = null;
+              updateShiftUI(false);
+            }
+          } catch (err) {
+            console.error("Delete shift error:", err);
+            alert("Не удалось удалить смену.");
+          }
+        } else {
+          window.allShifts = window.allShifts.filter(s => s.id !== shiftId);
+          // Сброс активной смены в демо-режиме
+          if (shiftId === window.currentShiftDocId) {
+            window.isShiftActive = false;
+            window.currentShiftDocId = null;
+            window.shiftStartTimestamp = null;
+            updateShiftUI(false);
+          }
+          renderApp();
+        }
       }
       closeDeleteModal();
     });
@@ -1792,14 +1831,19 @@
 
           const actionTd = window.currentUser 
             ? `<td class="p-3 text-center">
-                 ${item.isVirtual 
-                   ? `<button onclick="window.fillWorkForShift('${item.date}', ${item.shiftDuration})" class="text-amber-500 hover:text-amber-700 p-1 transition" title="\u0417\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u044c \u0440\u0430\u0431\u043e\u0442\u044b">
-                        <i class="fa-solid fa-file-pen text-sm"></i>
-                      </button>`
-                   : `<button onclick="openDeleteModal('${item.id}')" class="text-slate-400 hover:text-red-600 p-1 transition" title="${t.btn_delete}">
-                        <i class="fa-regular fa-trash-can text-sm"></i>
-                      </button>`
-                 }
+                 <div class="flex items-center justify-center space-x-2">
+                   ${item.isVirtual 
+                     ? `<button onclick="window.fillWorkForShift('${item.date}', ${item.shiftDuration})" class="text-amber-500 hover:text-amber-700 p-1 transition" title="\u0417\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u044c \u0440\u0430\u0431\u043e\u0442\u044b">
+                          <i class="fa-solid fa-file-pen text-sm"></i>
+                        </button>
+                        <button onclick="window.openDeleteShiftModal('${dayShift ? dayShift.id : ''}')" class="text-slate-400 hover:text-red-600 p-1 transition" title="\u0423\u0434\u0430\u043b\u0438\u0442\u044c \u0441\u043c\u0435\u043d\u0443">
+                          <i class="fa-regular fa-trash-can text-sm"></i>
+                        </button>`
+                     : `<button onclick="openDeleteModal('${item.id}')" class="text-slate-400 hover:text-red-600 p-1 transition" title="${t.btn_delete}">
+                          <i class="fa-regular fa-trash-can text-sm"></i>
+                        </button>`
+                   }
+                 </div>
                </td>`
             : '';
 
