@@ -1138,12 +1138,9 @@
           shifts.push({ id: docSnap.id, firestoreId: docSnap.id, ...docSnap.data() });
         });
 
-        // Объединяем с локальным хранилищем localStorage
-        const local = loadLocalShifts();
-        const mergedMap = new Map();
-        local.forEach(s => mergedMap.set(s.date, s));
-        shifts.forEach(s => mergedMap.set(s.date, s));
-        window.allShifts = Array.from(mergedMap.values());
+        // Firestore — первоисточник правды! Обновляем состояние и локальный кэш
+        window.allShifts = shifts;
+        saveLocalShifts(shifts);
 
         // Восстановление активной смены при перезагрузке страницы
         const activeShift = window.allShifts.find(s => s.timeStart && !s.timeEnd && s.masterEmail === (window.currentUser?.email || ''));
@@ -1476,9 +1473,7 @@
               await deleteDoc(doc(db, 'work_shifts', shiftId));
             }
             if (shiftDate) {
-              const q = query(collection(db, 'work_shifts'), 
-                where('date', '==', shiftDate), 
-                where('masterEmail', '==', window.currentUser?.email || ''));
+              const q = query(collection(db, 'work_shifts'), where('date', '==', shiftDate));
               const snap = await getDocs(q);
               for (const d of snap.docs) {
                 await deleteDoc(doc(db, 'work_shifts', d.id));
