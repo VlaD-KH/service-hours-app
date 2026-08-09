@@ -1,5 +1,5 @@
 // Версия кеша привязана к хешу сборки — обновляйте при каждом деплое
-const CACHE_VERSION = 'zps-hours-v4-' + '20260809';
+const CACHE_VERSION = 'zps-hours-v5-' + '20260809b';
 const CACHE_NAME = CACHE_VERSION;
 
 const ASSETS_TO_CACHE = [

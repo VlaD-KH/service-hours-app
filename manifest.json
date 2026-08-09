@@ -4,23 +4,39 @@
   "description": "Приложение учета рабочего времени сервисных мастеров и руководителей ZPS",
   "icons": [
     {
-      "src": "icons/icon-192.png",
+      "src": "/service-hours-app/icons/icon-192.png",
       "type": "image/png",
       "sizes": "192x192",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "icons/icon-512.png",
+      "src": "/service-hours-app/icons/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/service-hours-app/icons/icon-512.png",
       "type": "image/png",
       "sizes": "512x512",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/service-hours-app/icons/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
     }
   ],
-  "start_url": "./index.html",
-  "scope": "./",
+  "start_url": "/service-hours-app/index.html",
+  "scope": "/service-hours-app/",
+  "id": "/service-hours-app/",
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "any",
-  "categories": ["business", "productivity"]
+  "lang": "ru",
+  "categories": ["business", "productivity"],
+  "prefer_related_applications": false
 }
