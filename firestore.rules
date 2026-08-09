@@ -6,7 +6,6 @@ service cloud.firestore {
     // Функция проверки белого списка мастеров
     function isAllowedMaster() {
       return request.auth != null
-        && request.auth.token.email_verified == true
         && request.auth.token.email in [
           'vladhrapko@gmail.com'
         ];
@@ -14,36 +13,17 @@ service cloud.firestore {
 
     // Правила безопасности для коллекции учета рабочего времени
     match /work_entries/{entryId} {
-      // Чтение: разрешено всем (начальник / гость может смотреть дашборд)
       allow read: if true;
-      
-      // Запись: только авторизованный мастер из белого списка
-      allow create: if isAllowedMaster()
-        && request.resource.data.keys().hasAll(['date', 'orderNo', 'equipment', 'hours', 'category'])
-        && request.resource.data.hours is number
-        && request.resource.data.hours > 0
-        && request.resource.data.hours <= 24;
-      
-      allow update: if isAllowedMaster()
-        && request.resource.data.hours is number
-        && request.resource.data.hours > 0
-        && request.resource.data.hours <= 24;
-      
+      allow create: if isAllowedMaster();
+      allow update: if isAllowedMaster();
       allow delete: if isAllowedMaster();
     }
 
     // Правила безопасности для коллекции смен
     match /work_shifts/{shiftId} {
-      // Чтение: разрешено всем
       allow read: if true;
-      
-      // Запись: только авторизованный мастер из белого списка
-      allow create: if isAllowedMaster()
-        && request.resource.data.keys().hasAll(['date', 'timeStart', 'masterEmail'])
-        && request.resource.data.masterEmail == request.auth.token.email;
-      
+      allow create: if isAllowedMaster();
       allow update: if isAllowedMaster();
-      
       allow delete: if isAllowedMaster();
     }
 

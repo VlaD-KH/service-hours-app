@@ -1469,8 +1469,12 @@
         // 2. Удаляем из Firestore
         if (isConfigValid && db) {
           try {
-            if (shiftId && !shiftId.startsWith('shift-')) {
-              await deleteDoc(doc(db, 'work_shifts', shiftId));
+            if (shiftId) {
+              try {
+                await deleteDoc(doc(db, 'work_shifts', shiftId));
+              } catch (e) {
+                console.warn("Delete doc by ID notice:", e);
+              }
             }
             if (shiftDate) {
               const q = query(collection(db, 'work_shifts'), where('date', '==', shiftDate));
@@ -1480,7 +1484,8 @@
               }
             }
           } catch (err) {
-            console.warn("Delete shift Firestore warning:", err);
+            console.error("Delete shift error:", err);
+            alert("Ошибка при удалении смены из облака: " + (err.message || err));
           }
         }
 
@@ -1652,10 +1657,19 @@
       });
 
       // 1A. Собираем уникальные смены за этот же месяц и год
-      const shiftDates = (window.allShifts || []).filter(s => {
+      const rawShifts = (window.allShifts || []).filter(s => {
         if (!s.date) return false;
         const [y, m] = s.date.split('-');
         return y === filterYear && m === filterMonth;
+      });
+
+      const seenShiftDates = new Set();
+      const shiftDates = [];
+      rawShifts.forEach(s => {
+        if (!seenShiftDates.has(s.date)) {
+          seenShiftDates.add(s.date);
+          shiftDates.push(s);
+        }
       });
 
       // Компилируем итоговый список строк журнала (реальные + виртуальные заглушки для пустых смен)
@@ -1683,6 +1697,7 @@
 
           journalItems.push({
             id: 'virtual-shift-' + shift.id,
+            shiftObj: shift,
             date: shift.date,
             orderNo: '',
             equipment: '',
@@ -1813,7 +1828,7 @@
           }
 
           // Поиск смены для текущей даты из коллекции work_shifts
-          const dayShift = (window.allShifts || []).find(s => s.date === item.date);
+          const dayShift = item.isVirtual ? item.shiftObj : (window.allShifts || []).find(s => s.date === item.date);
           let shiftTimeHtml = '<span class="text-slate-300">&mdash;</span>';
           if (dayShift && dayShift.timeStart) {
             const timeRange = dayShift.timeEnd 
@@ -1849,10 +1864,10 @@
             ? `<td class="p-3 text-center">
                  <div class="flex items-center justify-center space-x-2">
                    ${item.isVirtual 
-                     ? `<button onclick="window.fillWorkForShift('${item.date}', ${item.shiftDuration})" class="text-amber-500 hover:text-amber-700 p-1 transition" title="\u0417\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u044c \u0440\u0430\u0431\u043e\u0442\u044b">
+                     ? `<button onclick="window.fillWorkForShift('${item.date}', ${item.shiftDuration})" class="text-amber-500 hover:text-amber-700 p-1 transition" title="Заполнить работы">
                           <i class="fa-solid fa-file-pen text-sm"></i>
                         </button>
-                        <button onclick="window.openDeleteShiftModal('${dayShift ? dayShift.id : ''}')" class="text-slate-400 hover:text-red-600 p-1 transition" title="\u0423\u0434\u0430\u043b\u0438\u0442\u044c \u0441\u043c\u0435\u043d\u0443">
+                        <button onclick="window.openDeleteShiftModal('${dayShift ? (dayShift.firestoreId || dayShift.id) : ''}', '${escapeHTML(item.date)}')" class="text-slate-400 hover:text-red-600 p-1 transition" title="Удалить смену">
                           <i class="fa-regular fa-trash-can text-sm"></i>
                         </button>`
                      : `<button onclick="openDeleteModal('${item.id}')" class="text-slate-400 hover:text-red-600 p-1 transition" title="${t.btn_delete}">
