@@ -239,7 +239,7 @@
           </div>
 
           <div class="overflow-x-auto">
-            <table class="w-full text-xs text-left border-collapse min-w-[700px]">
+            <table class="w-full text-xs text-left border-collapse min-w-[550px] lg:min-w-0">
               <thead class="bg-slate-100/70 text-slate-600 uppercase font-bold border-b border-slate-200 select-none">
                 <tr>
                   <th onclick="window.togglePivotSort('orderNo')" class="p-3 cursor-pointer hover:bg-slate-200/60 transition whitespace-nowrap">
@@ -288,7 +288,7 @@
           </div>
 
           <div class="overflow-x-auto max-h-[420px] overflow-y-auto">
-            <table class="w-full text-xs text-left min-w-[850px]">
+            <table class="w-full text-xs text-left min-w-[650px] lg:min-w-0">
               <thead class="bg-slate-50 text-slate-600 uppercase sticky top-0 z-10 border-b border-slate-200 select-none">
                 <tr>
                   <th class="p-3 whitespace-nowrap text-center">
@@ -1150,9 +1150,10 @@
         if (activeShift && !window.isShiftActive) {
           window.isShiftActive = true;
           window.currentShiftDocId = activeShift.firestoreId || activeShift.id;
+          const shiftDateStr = activeShift.date || getLocalDateString();
+          const [y, mon, d] = shiftDateStr.split('-').map(Number);
           const [h, m] = (activeShift.timeStart || '00:00').split(':').map(Number);
-          const restored = new Date();
-          restored.setHours(h, m, 0, 0);
+          const restored = new Date(y, mon - 1, d, h, m, 0);
           window.shiftStartTimestamp = restored.getTime();
           updateShiftUI(true);
         }
@@ -1429,22 +1430,25 @@
       document.getElementById('delete-modal').classList.remove('hidden');
     };
 
-    window.openDeleteShiftModal = function(shiftId) {
+    window.openDeleteShiftModal = function(shiftId, shiftDate) {
       if (!window.currentUser) return;
       window.pendingDeleteShiftId = shiftId;
+      window.pendingDeleteShiftDate = shiftDate;
       document.getElementById('delete-modal').classList.remove('hidden');
     };
 
     window.closeDeleteModal = function() {
       window.pendingDeleteId = null;
       window.pendingDeleteShiftId = null;
+      window.pendingDeleteShiftDate = null;
       document.getElementById('delete-modal').classList.add('hidden');
     };
 
     document.getElementById('confirm-delete-btn').addEventListener('click', async () => {
       const id = window.pendingDeleteId;
       const shiftId = window.pendingDeleteShiftId;
-      if ((!id && !shiftId) || !window.currentUser) return;
+      const shiftDate = window.pendingDeleteShiftDate;
+      if ((!id && !shiftId && !shiftDate) || !window.currentUser) return;
 
       if (id) {
         if (isConfigValid && db) {
@@ -1459,22 +1463,33 @@
           window.allEntries = window.allEntries.filter(e => e.id !== id);
           renderApp();
         }
-      } else if (shiftId) {
-        // Удаляем из localStorage
-        const localShifts = loadLocalShifts().filter(s => s.id !== shiftId && s.firestoreId !== shiftId);
+      } else if (shiftId || shiftDate) {
+        // 1. Удаляем из localStorage
+        const localShifts = loadLocalShifts().filter(s => s.id !== shiftId && s.firestoreId !== shiftId && (shiftDate ? s.date !== shiftDate : true));
         saveLocalShifts(localShifts);
         window.allShifts = localShifts;
 
+        // 2. Удаляем из Firestore
         if (isConfigValid && db) {
           try {
-            const docRef = doc(db, 'work_shifts', shiftId);
-            await deleteDoc(docRef);
+            if (shiftId && !shiftId.startsWith('shift-')) {
+              await deleteDoc(doc(db, 'work_shifts', shiftId));
+            }
+            if (shiftDate) {
+              const q = query(collection(db, 'work_shifts'), 
+                where('date', '==', shiftDate), 
+                where('masterEmail', '==', window.currentUser?.email || ''));
+              const snap = await getDocs(q);
+              for (const d of snap.docs) {
+                await deleteDoc(doc(db, 'work_shifts', d.id));
+              }
+            }
           } catch (err) {
             console.warn("Delete shift Firestore warning:", err);
           }
         }
 
-        if (shiftId === window.currentShiftDocId) {
+        if ((shiftId && shiftId === window.currentShiftDocId) || (shiftDate && shiftDate === getLocalDateString())) {
           window.isShiftActive = false;
           window.currentShiftDocId = null;
           window.shiftStartTimestamp = null;
@@ -2033,7 +2048,7 @@
       const timerEl = document.getElementById('shift-timer-value');
       window._shiftTimerInterval = setInterval(() => {
         if (!window.shiftStartTimestamp || !timerEl) return;
-        const elapsed = Date.now() - window.shiftStartTimestamp;
+        const elapsed = Math.max(0, Date.now() - window.shiftStartTimestamp);
         const totalSec = Math.floor(elapsed / 1000);
         const hh = String(Math.floor(totalSec / 3600)).padStart(2, '0');
         const mm = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
