@@ -4,7 +4,6 @@
 .env.*.local
 
 # Debug logs and system files
-antigravity_debug.log
 *.log
 .DS_Store
 Thumbs.db

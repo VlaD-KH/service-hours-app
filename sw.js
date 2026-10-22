@@ -1,5 +1,5 @@
-// Версия кеша привязана к хешу сборки — обновляйте при каждом деплое
-const CACHE_VERSION = 'zps-hours-v5-' + '20260809b';
+// Версия кеша = хеш файлов приложения; обновляется автоматически (scripts/sync.js, pre-commit хук)
+const CACHE_VERSION = 'zps-hours-v5-' + '61246735';
 const CACHE_NAME = CACHE_VERSION;
 
 const ASSETS_TO_CACHE = [

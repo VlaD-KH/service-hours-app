@@ -1,0 +1,3 @@
+#!/bin/sh
+# Синхронизирует env.js / firestore.rules / версию кэша SW перед коммитом.
+node scripts/sync.js && git add env.js firestore.rules sw.js

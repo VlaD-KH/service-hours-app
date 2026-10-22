@@ -14,10 +14,11 @@ const messagingSenderId = env.FIREBASE_MESSAGING_SENDER_ID || "122824920296";
 const appId = env.FIREBASE_APP_ID || "1:122824920296:web:36d289606cdc2018b28d5d";
 const measurementId = env.FIREBASE_MEASUREMENT_ID || "G-FVZ569X8ZZ";
 
-const allowedMastersRaw = env.ALLOWED_MASTERS || "vladhrapko@gmail.com";
-const allowedMasters = allowedMastersRaw
-  ? allowedMastersRaw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
-  : ["vladhrapko@gmail.com"];
+// Список мастеров: переменная ALLOWED_MASTERS (через запятую) или masters.json — единый источник.
+const allowedMasters = (env.ALLOWED_MASTERS
+  ? env.ALLOWED_MASTERS.split(',')
+  : JSON.parse(fs.readFileSync('./masters.json', 'utf8')))
+  .map(s => s.trim().toLowerCase()).filter(Boolean);
 
 const content = `// Сгенерировано автоматически через build-env.js
 window.ENV = {

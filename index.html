@@ -182,6 +182,7 @@
                 <option value="P" id="i18n-cat-p">P — Пневматика</option>
                 <option value="E" id="i18n-cat-e">E — Электрика</option>
                 <option value="S" id="i18n-cat-s">S — Слесарные работы</option>
+                <option value="M" id="i18n-cat-m">M — Малярка</option>
                 <option value="D+N" id="i18n-cat-dn">D+N — Диагностика + Ремонт</option>
               </select>
             </div>
@@ -261,6 +262,9 @@
                   </th>
                   <th onclick="window.togglePivotSort('S')" class="p-3 text-center text-slate-600 cursor-pointer hover:bg-slate-200/60 transition">
                     <span>S</span> <i id="sort-pivot-S" class="fa-solid fa-sort text-[10px] opacity-30"></i>
+                  </th>
+                  <th onclick="window.togglePivotSort('M')" class="p-3 text-center text-pink-600 cursor-pointer hover:bg-slate-200/60 transition">
+                    <span>M</span> <i id="sort-pivot-M" class="fa-solid fa-sort text-[10px] opacity-30"></i>
                   </th>
                   <th onclick="window.togglePivotSort('D+N')" class="p-3 text-center text-purple-600 cursor-pointer hover:bg-slate-200/60 transition">
                     <span>D+N</span> <i id="sort-pivot-D+N" class="fa-solid fa-sort text-[10px] opacity-30"></i>
@@ -528,6 +532,7 @@
             <option value="P" id="i18n-ai-cat-p">P — Пневматика</option>
             <option value="E" id="i18n-ai-cat-e">E — Электрика</option>
             <option value="S" id="i18n-ai-cat-s">S — Слесарные работы</option>
+            <option value="M" id="i18n-ai-cat-m">M — Малярка</option>
             <option value="D+N" id="i18n-ai-cat-dn">D+N — Диагностика + Ремонт</option>
           </select>
         </div>
@@ -614,6 +619,7 @@
         cat_p: "P — Пневматика",
         cat_e: "E — Электрика",
         cat_s: "S — Слесарные работы",
+        cat_m: "M — Малярка",
         cat_dn: "D+N — Диагностика + Ремонт",
         label_notes: "Заметки / Описание",
         btn_save: "Сохранить в Облако",
@@ -632,6 +638,7 @@
         th_p: "P (Пневм)",
         th_e: "E (Электр)",
         th_s: "S (Слесар)",
+        th_m: "M (Маляр)",
         th_dn: "D+N (Диаг)",
         th_total: "Итого",
         journal_title: "Журнал записей за период",
@@ -715,6 +722,7 @@
         cat_p: "P — Pneumatyka",
         cat_e: "E — Elektryka",
         cat_s: "S — Prace ślusarskie",
+        cat_m: "M — Malowanie",
         cat_dn: "D+N — Diagnostyka + Naprawa",
         label_notes: "Uwagi / Opis",
         btn_save: "Zapisz w Chmurze",
@@ -733,6 +741,7 @@
         th_p: "P (Pneum)",
         th_e: "E (Elektr)",
         th_s: "S (Ślusar)",
+        th_m: "M (Malow)",
         th_dn: "D+N (Diag)",
         th_total: "Suma",
         journal_title: "Dziennik wpisów za okres",
@@ -792,7 +801,7 @@
             <br>• <em>Kierownik:</em> Widzi pełny pulpit, godziny, tabele podsumowujące i dziennik (Bez logowania).
             <br>• <em>Mistrz:</em> Loguje się, aby dodawać nowe zmiany oraz edytować/usuwać wpisy.
           </p>
-          <p>📊 <strong>Analityka:</strong> Tabela automatycznie grupuje przepracowane godziny według zleceń i modeli w podziale na kategorie (H, P, E, S, D+N).</p>
+          <p>📊 <strong>Analityka:</strong> Tabela automatycznie grupuje przepracowane godziny według zleceń i modeli w podziale na kategorie (H, P, E, S, M, D+N).</p>
         `
       },
       en: {
@@ -816,6 +825,7 @@
         cat_p: "P — Pneumatics",
         cat_e: "E — Electrical",
         cat_s: "S — Fitting Works",
+        cat_m: "M — Painting",
         cat_dn: "D+N — Diagnostics + Repair",
         label_notes: "Notes / Description",
         btn_save: "Save to Cloud",
@@ -834,6 +844,7 @@
         th_p: "P (Pneum)",
         th_e: "E (Elec)",
         th_s: "S (Fitting)",
+        th_m: "M (Paint)",
         th_dn: "D+N (Diag)",
         th_total: "Total",
         journal_title: "Entries Journal for Period",
@@ -893,7 +904,7 @@
             <br>• <em>Manager / Boss:</em> Sees full dashboard, total hours, summary pivot tables, and journal (No login required).
             <br>• <em>Master:</em> Logs in to add new work shifts and delete/manage entries.
           </p>
-          <p>📊 <strong>Summary Analytics:</strong> Pivot table automatically totals hours worked per job site broken down by categories (H, P, E, S, D+N).</p>
+          <p>📊 <strong>Summary Analytics:</strong> Pivot table automatically totals hours worked per job site broken down by categories (H, P, E, S, M, D+N).</p>
         `
       }
     };
@@ -962,6 +973,7 @@
       setElemText('i18n-cat-p', t.cat_p);
       setElemText('i18n-cat-e', t.cat_e);
       setElemText('i18n-cat-s', t.cat_s);
+      setElemText('i18n-cat-m', t.cat_m);
       setElemText('i18n-cat-dn', t.cat_dn);
       setElemText('i18n-label-notes', t.label_notes);
       setElemText('i18n-btn-save', t.btn_save);
@@ -1036,6 +1048,7 @@
       setElemText('i18n-ai-cat-p', t.cat_p);
       setElemText('i18n-ai-cat-e', t.cat_e);
       setElemText('i18n-ai-cat-s', t.cat_s);
+      setElemText('i18n-ai-cat-m', t.cat_m);
       setElemText('i18n-ai-cat-dn', t.cat_dn);
       setElemText('i18n-ai-lbl-notes', t.ai_lbl_notes);
       setElemHTML('i18n-ai-btn-confirm', `<i class="fa-solid fa-check"></i><span>${t.ai_btn_confirm}</span>`);
@@ -1613,7 +1626,7 @@
         window.pivotSortDir = window.pivotSortDir === 'asc' ? 'desc' : 'asc';
       } else {
         window.pivotSortKey = key;
-        window.pivotSortDir = ['H', 'P', 'E', 'S', 'D+N', 'total'].includes(key) ? 'desc' : 'asc';
+        window.pivotSortDir = ['H', 'P', 'E', 'S', 'M', 'D+N', 'total'].includes(key) ? 'desc' : 'asc';
       }
       renderApp();
     };
@@ -1630,7 +1643,7 @@
         }
       });
 
-      ['orderNo', 'equipment', 'H', 'P', 'E', 'S', 'D+N', 'total'].forEach(k => {
+      ['orderNo', 'equipment', 'H', 'P', 'E', 'S', 'M', 'D+N', 'total'].forEach(k => {
         const el = document.getElementById(`sort-pivot-${k}`);
         if (el) {
           if (window.pivotSortKey === k) {
@@ -1743,7 +1756,7 @@
         const equipment = item.equipment ? item.equipment.trim() : '-';
         const key = `${orderNo}||${equipment}`;
         if (!pivotMap[key]) {
-          pivotMap[key] = { orderNo, equipment, H: 0, P: 0, E: 0, S: 0, 'D+N': 0, total: 0 };
+          pivotMap[key] = { orderNo, equipment, H: 0, P: 0, E: 0, S: 0, M: 0, 'D+N': 0, total: 0 };
         }
         const cat = item.category || 'S';
         const hrs = parseFloat(item.hours) || 0;
@@ -1759,7 +1772,7 @@
         let valA = a[window.pivotSortKey] ?? '';
         let valB = b[window.pivotSortKey] ?? '';
 
-        if (['H', 'P', 'E', 'S', 'D+N', 'total'].includes(window.pivotSortKey)) {
+        if (['H', 'P', 'E', 'S', 'M', 'D+N', 'total'].includes(window.pivotSortKey)) {
           valA = parseFloat(valA) || 0;
           valB = parseFloat(valB) || 0;
         } else {
@@ -1777,7 +1790,7 @@
       if (pivotTbody) pivotTbody.innerHTML = '';
  
       if (pivotList.length === 0) {
-        if (pivotTbody) pivotTbody.innerHTML = `<tr><td colSpan="8" class="text-center py-6 text-slate-400 font-normal">${t.pivot_empty}</td></tr>`;
+        if (pivotTbody) pivotTbody.innerHTML = `<tr><td colSpan="9" class="text-center py-6 text-slate-400 font-normal">${t.pivot_empty}</td></tr>`;
       } else {
         pivotList.forEach(row => {
           if (pivotTbody) {
@@ -1789,6 +1802,7 @@
                 <td class="p-3 text-center text-sky-700 font-semibold">${row.P > 0 ? row.P : '-'}</td>
                 <td class="p-3 text-center text-amber-700 font-semibold">${row.E > 0 ? row.E : '-'}</td>
                 <td class="p-3 text-center text-slate-700 font-semibold">${row.S > 0 ? row.S : '-'}</td>
+                <td class="p-3 text-center text-pink-700 font-semibold">${row.M > 0 ? row.M : '-'}</td>
                 <td class="p-3 text-center text-purple-700 font-semibold">${row['D+N'] > 0 ? row['D+N'] : '-'}</td>
                 <td class="p-3 text-center font-extrabold text-indigo-700 border-l border-slate-100 bg-indigo-50/50">${row.total}</td>
               </tr>
@@ -1813,6 +1827,7 @@
             'P': 'bg-sky-100 text-sky-700',
             'E': 'bg-amber-100 text-amber-700',
             'S': 'bg-slate-200 text-slate-700',
+            'M': 'bg-pink-100 text-pink-700',
             'D+N': 'bg-purple-100 text-purple-700'
           };
           const badgeClass = categoryBadges[item.category] || 'bg-slate-100 text-slate-700';
@@ -2515,13 +2530,14 @@
         }
       }
 
-      // 6. Определение категории категорий (H, P, E, S, D+N)
+      // 6. Определение категории категорий (H, P, E, S, M, D+N)
       let extractedCat = 'S';
       const cleanLower = processedText.toLowerCase();
       if (cleanLower.includes('гидр') || cleanLower.includes('hydr')) extractedCat = 'H';
       else if (cleanLower.includes('пневм') || cleanLower.includes('pneum')) extractedCat = 'P';
       else if (cleanLower.includes('электр') || cleanLower.includes('elektr') || cleanLower.includes('elec')) extractedCat = 'E';
       else if (cleanLower.includes('диаг') || cleanLower.includes('ремонт') || cleanLower.includes('diag') || cleanLower.includes('napraw')) extractedCat = 'D+N';
+      else if (cleanLower.includes('маляр') || cleanLower.includes('красить') || cleanLower.includes('покрас') || cleanLower.includes('malow') || cleanLower.includes('lakier') || cleanLower.includes('paint')) extractedCat = 'M';
       else if (cleanLower.includes('слесар') || cleanLower.includes('ślusar') || cleanLower.includes('fit')) extractedCat = 'S';
 
       // Заполнение модалки подтверждения
