@@ -165,7 +165,8 @@
               </div>
               <div>
                 <label id="i18n-label-hours" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Часы</label>
-                <input type="number" id="input-hours" step="0.1" min="0.1" placeholder="4.5" required class="w-full p-2.5 border border-slate-300 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50">
+                <input type="text" inputmode="decimal" id="input-hours" placeholder="6.83 (или 6:50)" required class="w-full p-2.5 border border-slate-300 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50">
+                <div id="input-hours-hint" class="text-[11px] text-slate-500 mt-1 font-medium min-h-[16px]"></div>
               </div>
             </div>
 
@@ -516,7 +517,8 @@
           </div>
           <div>
             <label id="i18n-ai-lbl-hours" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Часы</label>
-            <input type="number" id="ai-input-hours" step="0.1" min="0.1" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm font-bold bg-indigo-50/50 text-indigo-900 outline-none focus:ring-2 focus:ring-indigo-500">
+            <input type="text" inputmode="decimal" id="ai-input-hours" placeholder="6.83" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm font-bold bg-indigo-50/50 text-indigo-900 outline-none focus:ring-2 focus:ring-indigo-500">
+            <div id="ai-hours-hint" class="text-[11px] text-indigo-600 mt-1 font-medium min-h-[16px]"></div>
           </div>
         </div>
 
@@ -613,6 +615,7 @@
         label_date: "Дата",
         label_order: "№ Заказа",
         label_hours: "Часы",
+        placeholder_hours: "6.83 (или 6:50)",
         label_equipment: "Модель",
         label_category: "Категория работ",
         cat_h: "H — Гидравлика",
@@ -716,6 +719,7 @@
         label_date: "Data",
         label_order: "Nr Zlecenia",
         label_hours: "Godziny",
+        placeholder_hours: "6.83 (lub 6:50)",
         label_equipment: "Model",
         label_category: "Kategoria prac",
         cat_h: "H — Hydraulika",
@@ -819,6 +823,7 @@
         label_date: "Date",
         label_order: "Order No",
         label_hours: "Hours",
+        placeholder_hours: "6.83 (or 6:50)",
         label_equipment: "Model",
         label_category: "Work Category",
         cat_h: "H — Hydraulics",
@@ -967,6 +972,13 @@
       setElemText('i18n-label-date', t.label_date);
       setElemText('i18n-label-order', t.label_order);
       setElemText('i18n-label-hours', t.label_hours);
+      const hoursInput = document.getElementById('input-hours');
+      if (hoursInput) hoursInput.placeholder = t.placeholder_hours || '6.83 (или 6:50)';
+      const hoursHint = document.getElementById('input-hours-hint');
+      if (hoursInput && hoursHint) updateHoursHint(hoursInput, hoursHint);
+      const aiHoursInput = document.getElementById('ai-input-hours');
+      const aiHoursHint = document.getElementById('ai-hours-hint');
+      if (aiHoursInput && aiHoursHint) updateHoursHint(aiHoursInput, aiHoursHint);
       setElemText('i18n-label-equipment', t.label_equipment);
       setElemText('i18n-label-category', t.label_category);
       setElemText('i18n-cat-h', t.cat_h);
@@ -1393,6 +1405,72 @@
     }
 
     // =========================================================================
+    // 3B. ПЕРЕВОД МИНУТ В ДОЛИ ЧАСА (HUNDREDTHS OF AN HOUR: 50 мин ≈ 0.83 ч)
+    // =========================================================================
+
+    // Парсинг ввода часов: поддерживает доли часа (6.83), время (6:50), минуты (50 мин / 50m) и запятую (6,83)
+    function parseHoursInput(val) {
+      if (val === null || val === undefined) return 0;
+      let str = String(val).trim().replace(',', '.');
+      if (!str) return 0;
+      if (str.includes(':')) {
+        const parts = str.split(':');
+        const h = parseFloat(parts[0]) || 0;
+        const m = parseFloat(parts[1]) || 0;
+        return Math.round((h + m / 60) * 100) / 100;
+      }
+      const hm = str.match(/^(\d+(?:\.\d+)?)\s*(?:часов|часа|час|ч|godziny|godzin|godz|hours?|h)\s*(?:[^\p{L}\d]+(?:и|i|and)?\s*)?(\d+(?:\.\d+)?)?\s*(?:минут(?:ы|у)?|мин|minut(?:y)?|minutes?|min|m|м)?$/iu);
+      if (hm) {
+        const h = parseFloat(hm[1]) || 0;
+        const m = parseFloat(hm[2]) || 0;
+        return Math.round((h + m / 60) * 100) / 100;
+      }
+      const mOnly = str.match(/^(\d+(?:\.\d+)?)\s*(?:минут(?:ы|у)?|мин|minut(?:y)?|minutes?|min|m|м)$/iu);
+      if (mOnly) {
+        const m = parseFloat(mOnly[1]) || 0;
+        return Math.round((m / 60) * 100) / 100;
+      }
+      const num = parseFloat(str);
+      return isNaN(num) ? 0 : Math.round(num * 100) / 100;
+    }
+
+    // Форматирование долей часа в "ч мин" (например: 6.83 ч -> 6 ч 50 мин, 0.83 ч -> 50 мин)
+    function formatHoursToTimeStr(hrs, lang = window.currentLang || 'ru') {
+      if (!hrs || isNaN(hrs) || hrs <= 0) return '';
+      const totalMinutes = Math.round(hrs * 60);
+      const h = Math.floor(totalMinutes / 60);
+      const m = totalMinutes % 60;
+      const hUnit = lang === 'pl' ? 'godz' : (lang === 'en' ? 'h' : 'ч');
+      const mUnit = lang === 'pl' ? 'min' : (lang === 'en' ? 'min' : 'мин');
+      if (h > 0 && m > 0) return `${h} ${hUnit} ${m} ${mUnit}`;
+      if (h > 0) return `${h} ${hUnit}`;
+      return `${m} ${mUnit}`;
+    }
+
+    // Живая подсказка под полем ввода часов с переводом минут в доли часа
+    function updateHoursHint(inputEl, hintEl) {
+      if (!inputEl || !hintEl) return;
+      const rawVal = inputEl.value.trim();
+      if (!rawVal) {
+        hintEl.textContent = '';
+        return;
+      }
+      const parsed = parseHoursInput(rawVal);
+      if (!parsed || parsed <= 0) {
+        hintEl.textContent = '';
+        return;
+      }
+      const lang = window.currentLang || 'ru';
+      const timeStr = formatHoursToTimeStr(parsed, lang);
+      const unitStr = (translations[lang] || translations.ru).hours_unit || 'ч';
+      if (rawVal.includes(':') || /мин|min|m|м/i.test(rawVal)) {
+        hintEl.textContent = `= ${parsed} ${unitStr} (≈ ${timeStr})`;
+      } else {
+        hintEl.textContent = `≈ ${timeStr} (доли: ${parsed} ${unitStr})`;
+      }
+    }
+
+    // =========================================================================
     // 4. ДОБАВЛЕНИЕ И УДАЛЕНИЕ СМЕН
     // =========================================================================
 
@@ -1403,11 +1481,11 @@
         return;
       }
       
-      const rawHours = parseFloat(document.getElementById('input-hours').value);
+      const rawHours = parseHoursInput(document.getElementById('input-hours').value);
       const entry = {
         date: document.getElementById('input-date').value,
         orderNo: document.getElementById('input-order').value.trim(),
-        hours: Math.round(rawHours * 10) / 10,
+        hours: Math.round(rawHours * 100) / 100,
         equipment: document.getElementById('input-equipment').value.trim(),
         category: document.getElementById('input-category').value,
         notes: document.getElementById('input-notes').value.trim(),
@@ -1431,6 +1509,8 @@
       }
 
       document.getElementById('input-hours').value = '';
+      const hoursHint = document.getElementById('input-hours-hint');
+      if (hoursHint) hoursHint.textContent = '';
       document.getElementById('input-notes').value = '';
     };
 
@@ -1602,6 +1682,38 @@
       }
     });
 
+    const hoursInputEl = document.getElementById('input-hours');
+    const hoursHintEl = document.getElementById('input-hours-hint');
+    if (hoursInputEl) {
+      hoursInputEl.addEventListener('input', () => updateHoursHint(hoursInputEl, hoursHintEl));
+      hoursInputEl.addEventListener('blur', () => {
+        const val = hoursInputEl.value.trim();
+        if (val) {
+          const parsed = parseHoursInput(val);
+          if (parsed > 0 && (val.includes(':') || val.includes(',') || /мин|min|m|м/i.test(val))) {
+            hoursInputEl.value = parsed;
+          }
+        }
+        updateHoursHint(hoursInputEl, hoursHintEl);
+      });
+    }
+
+    const aiHoursInputEl = document.getElementById('ai-input-hours');
+    const aiHoursHintEl = document.getElementById('ai-hours-hint');
+    if (aiHoursInputEl) {
+      aiHoursInputEl.addEventListener('input', () => updateHoursHint(aiHoursInputEl, aiHoursHintEl));
+      aiHoursInputEl.addEventListener('blur', () => {
+        const val = aiHoursInputEl.value.trim();
+        if (val) {
+          const parsed = parseHoursInput(val);
+          if (parsed > 0 && (val.includes(':') || val.includes(',') || /мин|min|m|м/i.test(val))) {
+            aiHoursInputEl.value = parsed;
+          }
+        }
+        updateHoursHint(aiHoursInputEl, aiHoursHintEl);
+      });
+    }
+
     // =========================================================================
     // 5. СОСТОЯНИЕ СОРТИРОВКИ И РЕНДЕРИНГ ИНТЕРФЕЙСА
     // =========================================================================
@@ -1688,7 +1800,7 @@
       // Компилируем итоговый список строк журнала (реальные + виртуальные заглушки для пустых смен)
       const journalItems = [...filtered];
 
-      // Вспомогательная функция для расчета длительности смены в часах
+      // Вспомогательная функция для расчета длительности смены в часах (с переводом минут в доли часа)
       function getShiftDurationHours(timeStart, timeEnd) {
         if (!timeStart) return 0;
         const endTime = timeEnd || (new Date().getHours().toString().padStart(2, '0') + ':' + new Date().getMinutes().toString().padStart(2, '0'));
@@ -1697,7 +1809,7 @@
         const startMins = sh * 60 + sm;
         const endMins = eh * 60 + em;
         const diff = endMins - startMins;
-        return diff > 0 ? Math.round((diff / 60) * 10) / 10 : 8.0;
+        return diff > 0 ? Math.round((diff / 60) * 100) / 100 : 8.0;
       }
 
       shiftDates.forEach(shift => {
@@ -1746,7 +1858,7 @@
 
       // Расчет общего количества часов (только по реальным записям!)
       const rawTotalHours = filtered.reduce((sum, item) => sum + (parseFloat(item.hours) || 0), 0);
-      const totalHours = Math.round(rawTotalHours * 10) / 10;
+      const totalHours = Math.round(rawTotalHours * 100) / 100;
       document.getElementById('total-hours-stat').innerHTML = `${totalHours} <span class="text-sm font-normal opacity-90">${t.hours_unit}</span>`;
 
       // Расчет сводной таблицы (Pivot)
@@ -1761,9 +1873,9 @@
         const cat = item.category || 'S';
         const hrs = parseFloat(item.hours) || 0;
         if (pivotMap[key][cat] !== undefined) {
-          pivotMap[key][cat] = Math.round((pivotMap[key][cat] + hrs) * 10) / 10;
+          pivotMap[key][cat] = Math.round((pivotMap[key][cat] + hrs) * 100) / 100;
         }
-        pivotMap[key].total = Math.round((pivotMap[key].total + hrs) * 10) / 10;
+        pivotMap[key].total = Math.round((pivotMap[key].total + hrs) * 100) / 100;
       });
 
       // Сортировка строк Pivot
@@ -2225,11 +2337,11 @@
         }
       }
 
-      // Вычислим отработанные часы смены
+      // Вычислим отработанные часы смены (с переводом минут в сотые доли часа)
       let durationHours = 8.0;
       if (window.shiftStartTimestamp) {
         const diffMs = Date.now() - window.shiftStartTimestamp;
-        durationHours = Math.max(0.1, Math.round((diffMs / (1000 * 60 * 60)) * 10) / 10);
+        durationHours = Math.max(0.01, Math.round((diffMs / (1000 * 60 * 60)) * 100) / 100);
       }
 
       const today = getLocalDateString();
@@ -2254,7 +2366,10 @@
       const formCard = document.getElementById('master-form-card');
 
       if (dateInput) dateInput.value = date;
-      if (hoursInput) hoursInput.value = hours;
+      if (hoursInput) {
+        hoursInput.value = hours;
+        updateHoursHint(hoursInput, document.getElementById('input-hours-hint'));
+      }
 
       if (notesInput) {
         const timeShiftStr = (window.currentLang === 'pl') 
@@ -2520,19 +2635,65 @@
         if (knownMatch) matchedOrder = knownMatch.orderNo;
       }
 
-      // 5. Поиск отработанных часов (из очищенного от "7:15" текста!)
-      const hoursMatch = processedText.match(/(\d+[.,]?\d*)\s*(час|ч|godz|hour|h)/i) || processedText.match(/\b(\d+[.,]?\d*)\b/);
+      // 5. Поиск отработанных часов (с переводом минут в доли часа)
       let extractedHours = '';
-      if (hoursMatch) {
-        const parsedVal = parseFloat(hoursMatch[1].replace(',', '.'));
-        if (!isNaN(parsedVal) && parsedVal <= 24) {
-          extractedHours = parsedVal;
+      const cleanLower = processedText.toLowerCase().replace(',', '.');
+
+      // 5a. Готовые фразы: полчаса / полтора часа
+      if (cleanLower.includes('полтора часа') || cleanLower.includes('półtorej godziny')) {
+        extractedHours = 1.5;
+      } else if (cleanLower.includes('полчаса') || cleanLower.includes('pół godziny') || cleanLower.includes('half an hour')) {
+        extractedHours = 0.5;
+      }
+
+      // 5b. Часы + минуты: "6 часов 50 минут", "6 godz 50 min", "6 h 50 min", "6ч 50м"
+      if (!extractedHours) {
+        const comboMatch = processedText.match(/(\d+(?:\.\d+)?)\s*(?:часов|часа|час|ч|godziny|godzin|godz|hours?|h)(?:[^\p{L}\d]+(?:и|i|and)?\s*)(\d+(?:\.\d+)?)\s*(?:минуты|минут|минуту|мин|minuty|minut|minutes?|min|m|м)(?=[^\p{L}\d]|$)/iu);
+        if (comboMatch) {
+          const h = parseFloat(comboMatch[1].replace(',', '.')) || 0;
+          const m = parseFloat(comboMatch[2].replace(',', '.')) || 0;
+          if (h <= 24 && m < 60) {
+            extractedHours = Math.round((h + m / 60) * 100) / 100;
+          }
+        }
+      }
+
+      // 5c. Формат времени HH:MM ("6:50", "0:50")
+      if (!extractedHours) {
+        const timeMatch = processedText.match(/(?:^|[^\p{L}\d])([0-2]?\d):([0-5]\d)(?=[^\p{L}\d]|$)/u);
+        if (timeMatch) {
+          const h = parseInt(timeMatch[1], 10);
+          const m = parseInt(timeMatch[2], 10);
+          if (h <= 24 && m < 60) {
+            extractedHours = Math.round((h + m / 60) * 100) / 100;
+          }
+        }
+      }
+
+      // 5d. Только минуты: "50 минут", "30 мин", "45 min"
+      if (!extractedHours) {
+        const minsMatch = processedText.match(/(?:^|[^\p{L}\d])(\d+(?:\.\d+)?)\s*(?:минуты|минут|минуту|мин|minuty|minut|minutes?|min)(?=[^\p{L}\d]|$)/iu);
+        if (minsMatch) {
+          const m = parseFloat(minsMatch[1].replace(',', '.')) || 0;
+          if (m > 0 && m <= 1440) {
+            extractedHours = Math.round((m / 60) * 100) / 100;
+          }
+        }
+      }
+
+      // 5e. Часы с десятичной дробью или целые: "6.83 часа", "6,83 ч", "8 часов"
+      if (!extractedHours) {
+        const hoursMatch = processedText.match(/(?:^|[^\p{L}\d])(\d+[.,]?\d*)\s*(?:часов|часа|час|ч|godziny|godzin|godz|hours?|h)(?=[^\p{L}\d]|$)/iu) || processedText.match(/(?:^|[^\p{L}\d])(\d+[.,]?\d*)(?=[^\p{L}\d]|$)/u);
+        if (hoursMatch) {
+          const parsedVal = parseFloat(hoursMatch[1].replace(',', '.'));
+          if (!isNaN(parsedVal) && parsedVal <= 24 && parsedVal > 0) {
+            extractedHours = Math.round(parsedVal * 100) / 100;
+          }
         }
       }
 
       // 6. Определение категории категорий (H, P, E, S, M, D+N)
       let extractedCat = 'S';
-      const cleanLower = processedText.toLowerCase();
       if (cleanLower.includes('гидр') || cleanLower.includes('hydr')) extractedCat = 'H';
       else if (cleanLower.includes('пневм') || cleanLower.includes('pneum')) extractedCat = 'P';
       else if (cleanLower.includes('электр') || cleanLower.includes('elektr') || cleanLower.includes('elec')) extractedCat = 'E';
@@ -2543,6 +2704,8 @@
       // Заполнение модалки подтверждения
       document.getElementById('ai-input-order').value = matchedOrder;
       document.getElementById('ai-input-hours').value = extractedHours;
+      const aiHintEl = document.getElementById('ai-hours-hint');
+      if (aiHintEl) updateHoursHint(document.getElementById('ai-input-hours'), aiHintEl);
       document.getElementById('ai-input-equipment').value = matchedEquip;
       document.getElementById('ai-input-category').value = extractedCat;
       document.getElementById('ai-input-notes').value = text;
@@ -2553,10 +2716,11 @@
     window.confirmAiEntrySave = async function() {
       if (!window.currentUser) return;
 
+      const rawAiHours = parseHoursInput(document.getElementById('ai-input-hours').value);
       const entry = {
         date: new Date().toISOString().split('T')[0],
         orderNo: document.getElementById('ai-input-order').value.trim(),
-        hours: parseFloat(document.getElementById('ai-input-hours').value) || 1.0,
+        hours: Math.round((rawAiHours || 1.0) * 100) / 100,
         equipment: document.getElementById('ai-input-equipment').value.trim(),
         category: document.getElementById('ai-input-category').value,
         notes: document.getElementById('ai-input-notes').value.trim(),
